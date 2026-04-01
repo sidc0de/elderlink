@@ -6,6 +6,9 @@ import 'elder/elder_home_screen.dart';
 import 'family/family_home_screen.dart';
 import 'splash_screen.dart';
 import 'volunteer/volunteer_home_screen.dart';
+import 'signup_elder_screen.dart';
+import 'signup_volunteer_screen.dart';
+import 'signup_family_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final UserRole role;
@@ -76,11 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => _dashboardForRole(widget.role)),
     );
-  }
-
-  void _useDemoAccount() {
-    _emailController.text = MockAuthService.instance.demoEmailForRole(widget.role);
-    _passwordController.text = '123456';
   }
 
   @override
@@ -219,13 +217,36 @@ class _LoginScreenState extends State<LoginScreen> {
                                     : const Text('Login'),
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: _isLoading ? null : _useDemoAccount,
-                                child: const Text('Use Demo Account'),
-                              ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  'Don\'t have an account? ',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: ElderLinkTheme.textSecondary,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            _signupScreenForRole(widget.role),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text(
+                                    'Sign Up',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: ElderLinkTheme.orange,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -239,6 +260,17 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+}
+
+Widget _signupScreenForRole(UserRole role) {
+  switch (role) {
+    case UserRole.elder:
+      return const SignupElderScreen();
+    case UserRole.volunteer:
+      return const SignupVolunteerScreen();
+    case UserRole.family:
+      return const SignupFamilyScreen();
   }
 }
 

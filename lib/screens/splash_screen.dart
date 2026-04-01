@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart';
 import 'login_screen.dart';
+import 'signup_elder_screen.dart';
+import 'signup_volunteer_screen.dart';
+import 'signup_family_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,8 +43,12 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateTo(UserRole role) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => LoginScreen(role: role)),
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _LoginOrSignupSheet(role: role),
     );
   }
 
@@ -253,6 +260,100 @@ class _RoleCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LoginOrSignupSheet extends StatelessWidget {
+  final UserRole role;
+
+  const _LoginOrSignupSheet({required this.role});
+
+  String _getRoleLabel() {
+    switch (role) {
+      case UserRole.elder:
+        return 'Elder';
+      case UserRole.volunteer:
+        return 'Volunteer';
+      case UserRole.family:
+        return 'Family Member';
+    }
+  }
+
+  Widget _signupScreenForRole() {
+    switch (role) {
+      case UserRole.elder:
+        return const SignupElderScreen();
+      case UserRole.volunteer:
+        return const SignupVolunteerScreen();
+      case UserRole.family:
+        return const SignupFamilyScreen();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: ElderLinkTheme.cardWhite,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Text(
+            'Continue as ${_getRoleLabel()}',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: ElderLinkTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Choose how you want to proceed',
+            style: TextStyle(
+              fontSize: 13,
+              color: ElderLinkTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => LoginScreen(role: role),
+                  ),
+                );
+              },
+              child: const Text('Login to Existing Account'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => _signupScreenForRole(),
+                  ),
+                );
+              },
+              child: const Text('Create New Account'),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }

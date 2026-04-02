@@ -1,5 +1,6 @@
 import '../../main.dart';
 import '../../models/app_user.dart';
+import '../../models/chat_thread.dart';
 import '../../models/family_dashboard.dart';
 import '../../models/help_request.dart';
 
@@ -38,6 +39,29 @@ class MockStore {
       location: 'Pune',
       lastActive: '2 min ago',
       isOnline: true,
+    ),
+  };
+
+  final Map<String, AppUser> volunteerUsersById = {
+    'volunteer_001': const AppUser(
+      id: 'volunteer_001',
+      name: 'Rohit Kumar',
+      initials: 'RK',
+      role: UserRole.volunteer,
+      colorValue: 0xFF7C5CBF,
+      location: 'Aundh, Pune',
+      lastActive: 'just now',
+      isOnline: true,
+    ),
+    'volunteer_002': const AppUser(
+      id: 'volunteer_002',
+      name: 'Ananya Patil',
+      initials: 'AP',
+      role: UserRole.volunteer,
+      colorValue: 0xFFFF6B35,
+      location: 'Baner, Pune',
+      lastActive: '15 min ago',
+      isOnline: false,
     ),
   };
 
@@ -138,6 +162,33 @@ class MockStore {
       createdAt: DateTime.now().subtract(const Duration(hours: 4)),
     ),
     HelpRequest(
+      id: 'req_007',
+      elderId: 'elder_001',
+      elderName: 'Sunita Deshpande',
+      elderInitials: 'SD',
+      elderColorValue: 0xFFFF6B35,
+      elderRating: 4.8,
+      elderTotalRequests: 12,
+      title: 'Doctor follow-up visit support',
+      description:
+          'Need company for a follow-up visit and help with returning home after the appointment.',
+      location: 'Ruby Hall Clinic',
+      timeLabel: 'Yesterday, 4:00 PM',
+      subtitle: 'Ruby Hall Clinic · Yesterday 4 PM',
+      category: RequestCategory.doctorVisit,
+      status: RequestStatus.completed,
+      volunteerId: 'volunteer_001',
+      volunteerName: 'Rohit Kumar',
+      volunteerInitials: 'RK',
+      volunteerColorValue: 0xFF7C5CBF,
+      distanceKm: 1.0,
+      isUrgent: false,
+      isDeleted: false,
+      hasAudio: false,
+      audioLocalPath: null,
+      createdAt: DateTime.now().subtract(const Duration(days: 2, hours: 3)),
+    ),
+    HelpRequest(
       id: 'req_003',
       elderId: 'elder_002',
       elderName: 'Ramesh Joshi',
@@ -236,6 +287,55 @@ class MockStore {
       hasAudio: false,
       audioLocalPath: null,
       createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+    ),
+  ];
+
+  final List<ChatThread> chatThreads = [
+    ChatThread(
+      id: 'thread_req_001',
+      requestId: 'req_001',
+      elderId: 'elder_001',
+      volunteerId: 'volunteer_001',
+      updatedAt: DateTime.now().subtract(const Duration(minutes: 18)),
+      messages: [
+        ChatMessage(
+          id: 'msg_req_001_1',
+          senderId: 'elder_001',
+          senderRole: UserRole.elder,
+          text: 'Thank you for accepting the medicine pickup request.',
+          timestamp: DateTime.now().subtract(const Duration(minutes: 34)),
+        ),
+        ChatMessage(
+          id: 'msg_req_001_2',
+          senderId: 'volunteer_001',
+          senderRole: UserRole.volunteer,
+          text: 'I am on it. I will reach Apollo in about 15 minutes.',
+          timestamp: DateTime.now().subtract(const Duration(minutes: 18)),
+        ),
+      ],
+    ),
+    ChatThread(
+      id: 'thread_req_007',
+      requestId: 'req_007',
+      elderId: 'elder_001',
+      volunteerId: 'volunteer_001',
+      updatedAt: DateTime.now().subtract(const Duration(hours: 5)),
+      messages: [
+        ChatMessage(
+          id: 'msg_req_007_1',
+          senderId: 'volunteer_001',
+          senderRole: UserRole.volunteer,
+          text: 'We are done with the visit. I will help you back home now.',
+          timestamp: DateTime.now().subtract(const Duration(hours: 5, minutes: 10)),
+        ),
+        ChatMessage(
+          id: 'msg_req_007_2',
+          senderId: 'elder_001',
+          senderRole: UserRole.elder,
+          text: 'Thank you, that was very helpful.',
+          timestamp: DateTime.now().subtract(const Duration(hours: 5)),
+        ),
+      ],
     ),
   ];
 }

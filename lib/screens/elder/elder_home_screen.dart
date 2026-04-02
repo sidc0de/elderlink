@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../models/help_request.dart';
-import '../../repositories/dashboard_repository.dart';
+import '../../repositories/chat_repository.dart';
+import '../../repositories/request_repository.dart';
 import '../../services/mock_auth_service.dart';
 import '../../ui/app_ui.dart';
 import '../../ui/language_selector.dart';
+import '../shared/request_chat_thread_screen.dart';
 import 'chat_screen.dart';
 import 'history_screen.dart';
 import 'post_request_screen.dart';
@@ -26,15 +28,13 @@ class ElderHomeScreen extends StatefulWidget {
 
 class _ElderHomeScreenState extends State<ElderHomeScreen>
     with SingleTickerProviderStateMixin {
+  late final RequestRepository _requestRepository;
   int _selectedNavIndex = 0;
   int _selectedTab = 0;
   int? _selectedMood;
-  bool _isLoading = true;
-  DateTime? _lastSyncedAt;
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
-  List<HelpRequest> _requests = [];
 
   final List<Map<String, String>> _moods = [
     {'emoji': '😊', 'label': 'Happy'},
@@ -46,6 +46,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
   @override
   void initState() {
     super.initState();
+    _requestRepository = RequestRepository.instance;
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -56,7 +57,6 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _animController.forward();
-    _loadDashboard();
   }
 
   @override
@@ -65,42 +65,29 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
     super.dispose();
   }
 
-  List<HelpRequest> get _filteredRequests {
+  String get _currentElderId =>
+      MockAuthService.instance.userForRole(UserRole.elder).id;
+
+  List<HelpRequest> _filteredRequests(List<HelpRequest> requests) {
     switch (_selectedTab) {
       case 1:
-        return _requests
+        return requests
             .where((r) =>
                 r.status == RequestStatus.pending ||
                 r.status == RequestStatus.accepted ||
                 r.status == RequestStatus.inProgress)
             .toList();
       case 2:
-        return _requests
+        return requests
             .where((r) => r.status == RequestStatus.completed)
             .toList();
       default:
-        return _requests;
+        return requests;
     }
   }
 
-  Future<void> _loadDashboard() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    await MockAuthService.instance.signInAs(UserRole.elder);
-    final response = await DashboardRepository.instance.fetchElderDashboard();
-
-    if (!mounted) return;
-    setState(() {
-      _requests = response.requests;
-      _lastSyncedAt = response.syncedAt;
-      _isLoading = false;
-    });
-  }
-
   String get _syncLabel {
-    final syncedAt = _lastSyncedAt;
-    if (syncedAt == null) return 'Syncing updates...';
+    final syncedAt = _requestRepository.lastUpdatedAt;
 
     final difference = DateTime.now().difference(syncedAt);
     if (difference.inMinutes < 1) {
@@ -175,6 +162,40 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
     );
   }
 
+  void _showSosDialogV2() {
+    showDialog(
+      context: context,
+      builder: (_) => _SosDialog(
+        onConfirm: _handleSosConfirm,
+      ),
+    );
+  }
+
+  Future<void> _handleSosConfirm() async {
+    final request = await _requestRepository.triggerSos(
+      locationLabel: 'Baner, Pune - Location shared with volunteer',
+    );
+    if (!mounted || request == null) return;
+
+    _showSnackbar('Emergency alert sent - A volunteer is on the way', Colors.red);
+
+    final volunteerId = request.volunteerId;
+    if (volunteerId == null) return;
+    final thread = ChatRepository.instance.getOrCreateThreadForRequest(
+      requestId: request.id,
+      elderId: request.elderId,
+      volunteerId: volunteerId,
+    );
+    if (thread == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RequestChatThreadScreen(threadId: thread.id),
+      ),
+    );
+  }
+
   void _showSnackbar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -194,9 +215,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ElderLinkTheme.background,
-      body: _selectedNavIndex == 0 && _isLoading
-          ? _buildLoadingState()
-          : _buildCurrentScreen(),
+      body: _buildCurrentScreen(),
       floatingActionButton: _selectedNavIndex == 0 ? _buildFab() : null,
       bottomNavigationBar: _buildBottomNav(),
     );
@@ -211,48 +230,49 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
       case 3:
         return const ProfileScreen(embedded: true);
       default:
-        return RefreshIndicator(
-          color: ElderLinkTheme.orange,
-          onRefresh: _loadDashboard,
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: SlideTransition(
-              position: _slideAnim,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(child: _buildHero()),
-                  SliverToBoxAdapter(child: _buildSummaryCard()),
-                  SliverToBoxAdapter(child: _buildTabRow()),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, i) {
-                        final list = _filteredRequests;
-                        if (i >= list.length) return null;
-                        return _RequestCard(
-                          request: list[i],
-                          onTap: () => _showDetailSheet(list[i]),
-                        );
-                      },
-                      childCount: _filteredRequests.length,
-                    ),
+        return AnimatedBuilder(
+          animation: _requestRepository,
+          builder: (context, _) {
+            final requests =
+                _requestRepository.getElderRequestsSnapshot(_currentElderId);
+            final filteredRequests = _filteredRequests(requests);
+
+            return RefreshIndicator(
+              color: ElderLinkTheme.orange,
+              onRefresh: () async => setState(() {}),
+              child: FadeTransition(
+                opacity: _fadeAnim,
+                child: SlideTransition(
+                  position: _slideAnim,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverToBoxAdapter(child: _buildHero()),
+                      SliverToBoxAdapter(child: _buildSummaryCard(requests)),
+                      SliverToBoxAdapter(child: _buildTabRow()),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, i) {
+                            if (i >= filteredRequests.length) return null;
+                            return _RequestCard(
+                              request: filteredRequests[i],
+                              onTap: () => _showDetailSheet(filteredRequests[i]),
+                            );
+                          },
+                          childCount: filteredRequests.length,
+                        ),
+                      ),
+                      if (filteredRequests.isEmpty)
+                        SliverToBoxAdapter(child: _buildEmptyState()),
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                    ],
                   ),
-                  if (_filteredRequests.isEmpty)
-                    SliverToBoxAdapter(child: _buildEmptyState()),
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
     }
-  }
-
-  Widget _buildLoadingState() {
-    return AppLoadingState(
-      color: ElderLinkTheme.orange,
-      message: context.l10n.t('fetchingLatestRequests'),
-    );
   }
 
   Widget _buildHero() {
@@ -373,7 +393,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
                   ),
                   const Spacer(),
                   GestureDetector(
-                    onTap: _showSosDialog,
+                    onTap: _showSosDialogV2,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
@@ -411,8 +431,8 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
     );
   }
 
-  Widget _buildSummaryCard() {
-    final activeCount = _requests
+  Widget _buildSummaryCard(List<HelpRequest> requests) {
+    final activeCount = requests
         .where((request) =>
             request.status == RequestStatus.pending ||
             request.status == RequestStatus.accepted ||
@@ -541,9 +561,6 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
           context,
           MaterialPageRoute(builder: (_) => const PostRequestScreen()),
         );
-        if (mounted) {
-          await _loadDashboard();
-        }
       },
       backgroundColor: ElderLinkTheme.orange,
       foregroundColor: Colors.white,
@@ -583,7 +600,40 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _RequestDetailSheet(request: request),
+      builder: (_) => _RequestDetailSheet(
+        request: request,
+        onOpenChat: () => _openRequestChat(request),
+        onRate: () => _showRatingSheet(request),
+      ),
+    );
+  }
+
+  void _openRequestChat(HelpRequest request) {
+    final volunteerId = request.volunteerId;
+    if (volunteerId == null) return;
+
+    final thread = ChatRepository.instance.getOrCreateThreadForRequest(
+      requestId: request.id,
+      elderId: request.elderId,
+      volunteerId: volunteerId,
+    );
+    if (thread == null) return;
+
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RequestChatThreadScreen(threadId: thread.id),
+      ),
+    );
+  }
+
+  Future<void> _showRatingSheet(HelpRequest request) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RateVolunteerSheet(request: request),
     );
   }
 }
@@ -604,9 +654,19 @@ class _RequestCard extends StatelessWidget {
       child: AppSurfaceCard(
         margin: const EdgeInsets.fromLTRB(16, 6, 16, 6),
         padding: const EdgeInsets.all(16),
+        border: Border.all(
+          color: request.isEmergency
+              ? const Color(0xFFFFB4A1)
+              : ElderLinkTheme.borderLight,
+          width: request.isEmergency ? 1.6 : 1,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (request.isEmergency) ...[
+              const AppEmergencyBadge(label: 'SOS Active'),
+              const SizedBox(height: 10),
+            ],
             Row(
               children: [
                 _CategoryPill(category: request.category),
@@ -720,7 +780,14 @@ class _StatusBadge extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _RequestDetailSheet extends StatelessWidget {
   final HelpRequest request;
-  const _RequestDetailSheet({required this.request});
+  final VoidCallback onOpenChat;
+  final VoidCallback onRate;
+
+  const _RequestDetailSheet({
+    required this.request,
+    required this.onOpenChat,
+    required this.onRate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -781,14 +848,21 @@ class _RequestDetailSheet extends StatelessWidget {
                   ],
                 ),
                 const Spacer(),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F4FF),
-                    borderRadius: BorderRadius.circular(12),
+                InkWell(
+                  onTap: onOpenChat,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F4FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      color: ElderLinkTheme.purple,
+                      size: 20,
+                    ),
                   ),
-                  child: const Icon(Icons.chat_bubble_outline_rounded,
-                      color: ElderLinkTheme.purple, size: 20),
                 ),
               ],
             ),
@@ -798,29 +872,304 @@ class _RequestDetailSheet extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
                 if (request.status == RequestStatus.completed) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: ElderLinkTheme.orange,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      margin: const EdgeInsets.all(16),
-                      content: const Text('⭐ Thank you for rating!',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600)),
-                    ),
-                  );
+                  Navigator.pop(context);
+                  onRate();
+                } else {
+                  Navigator.pop(context);
                 }
               },
               child: Text(request.status == RequestStatus.completed
-                  ? '⭐ Rate Volunteer'
+                  ? 'Rate Volunteer'
                   : 'Close'),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SosDialog extends StatefulWidget {
+  final Future<void> Function() onConfirm;
+
+  const _SosDialog({required this.onConfirm});
+
+  @override
+  State<_SosDialog> createState() => _SosDialogState();
+}
+
+class _SosDialogState extends State<_SosDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    Navigator.pop(context);
+    await widget.onConfirm();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) {
+                final scale = 0.96 + (_controller.value * 0.08);
+                return Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: 78,
+                    height: 78,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF0EB),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.16 + (_controller.value * 0.12)),
+                          blurRadius: 18,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.red,
+                      size: 34,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Emergency Alert Sent',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: ElderLinkTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'We will create a high-priority emergency request, share your location, and connect you with the assigned volunteer right away.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: ElderLinkTheme.textSecondary,
+                height: 1.55,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF8F6),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'What happens next',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.red,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '• Emergency request created',
+                    style: TextStyle(fontSize: 13, color: ElderLinkTheme.textPrimary),
+                  ),
+                  Text(
+                    '• Volunteer assigned immediately',
+                    style: TextStyle(fontSize: 13, color: ElderLinkTheme.textPrimary),
+                  ),
+                  Text(
+                    '• Location shared with volunteer',
+                    style: TextStyle(fontSize: 13, color: ElderLinkTheme.textPrimary),
+                  ),
+                  Text(
+                    '• Emergency chat opens automatically',
+                    style: TextStyle(fontSize: 13, color: ElderLinkTheme.textPrimary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _submitting ? null : _confirm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Send Emergency Alert'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _submitting ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RateVolunteerSheet extends StatefulWidget {
+  final HelpRequest request;
+
+  const _RateVolunteerSheet({required this.request});
+
+  @override
+  State<_RateVolunteerSheet> createState() => _RateVolunteerSheetState();
+}
+
+class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
+  final TextEditingController _feedbackController = TextEditingController();
+  int _selectedRating = 5;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    await RequestRepository.instance.submitVolunteerRating(
+      requestId: widget.request.id,
+      rating: _selectedRating,
+      feedback: _feedbackController.text,
+    );
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: ElderLinkTheme.orange,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        content: const Text(
+          'Thank you for rating!',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: AppBottomSheetScaffold(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          16,
+          24,
+          MediaQuery.of(context).padding.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AppBottomSheetHandle(),
+            const SizedBox(height: 20),
+            Text(
+              'Rate ${widget.request.volunteerName ?? 'Volunteer'}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.request.title,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (index) {
+                final star = index + 1;
+                return IconButton(
+                  onPressed: () => setState(() => _selectedRating = star),
+                  icon: Icon(
+                    star <= _selectedRating
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
+                    color: ElderLinkTheme.orange,
+                    size: 34,
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _feedbackController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'Share a short note (optional)',
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _submit,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Submit Rating'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

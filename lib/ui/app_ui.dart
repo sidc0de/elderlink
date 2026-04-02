@@ -554,3 +554,96 @@ class AppInlineBanner extends StatelessWidget {
     );
   }
 }
+
+class AppEmergencyBadge extends StatefulWidget {
+  final String label;
+
+  const AppEmergencyBadge({
+    super.key,
+    this.label = 'Emergency',
+  });
+
+  @override
+  State<AppEmergencyBadge> createState() => _AppEmergencyBadgeState();
+}
+
+class _AppEmergencyBadgeState extends State<AppEmergencyBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final pulse = 0.55 + (_controller.value * 0.45);
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF0EB),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: Color.lerp(
+                    ElderLinkTheme.orange.withOpacity(0.18),
+                    ElderLinkTheme.orange.withOpacity(0.5),
+                    _controller.value,
+                  ) ??
+                  ElderLinkTheme.orange,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Transform.scale(
+                scale: 0.9 + (_controller.value * 0.14),
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: Color.lerp(
+                      ElderLinkTheme.orange.withOpacity(0.65),
+                      ElderLinkTheme.orange,
+                      pulse,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: ElderLinkTheme.orange.withOpacity(0.22 * pulse),
+                        blurRadius: 10,
+                        spreadRadius: 1.2,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: ElderLinkTheme.orange,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

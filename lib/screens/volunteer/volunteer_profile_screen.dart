@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../../repositories/request_repository.dart';
+import '../../services/mock_auth_service.dart';
 import '../login_screen.dart';
 import '../../ui/app_ui.dart';
 import '../../ui/language_selector.dart';
@@ -23,10 +25,12 @@ class _VolunteerProfileScreenState extends State<VolunteerProfileScreen>
   late final AnimationController _animController;
   late final Animation<double> _fadeAnim;
   late final Animation<Offset> _slideAnim;
+  late final RequestRepository _repository;
 
   @override
   void initState() {
     super.initState();
+    _repository = RequestRepository.instance;
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -60,7 +64,14 @@ class _VolunteerProfileScreenState extends State<VolunteerProfileScreen>
                 subtitle: context.l10n.t('volunteerProfileSubtitle'),
               ),
               const SizedBox(height: 16),
-              const _ProfileCard(),
+              AnimatedBuilder(
+                animation: _repository,
+                builder: (context, _) => _ProfileCard(
+                  stats: _repository.getVolunteerRatingStats(
+                    MockAuthService.instance.userForRole(UserRole.volunteer).id,
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
               const _MenuCard(),
             ],
@@ -79,7 +90,9 @@ class _VolunteerProfileScreenState extends State<VolunteerProfileScreen>
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard();
+  final VolunteerRatingStats stats;
+
+  const _ProfileCard({required this.stats});
 
   @override
   Widget build(BuildContext context) {
@@ -106,10 +119,27 @@ class _ProfileCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: AppInlineBanner(
+                  icon: Icons.star_rounded,
+                  title: stats.totalRatings == 0
+                      ? 'No ratings yet'
+                      : '${stats.averageRating.toStringAsFixed(1)} average rating',
+                  subtitle: '${stats.totalRatings} ratings received',
+                  color: ElderLinkTheme.orange,
+                  backgroundColor: const Color(0xFFFFF5F2),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           AppInlineBanner(
             icon: Icons.favorite_outline_rounded,
             title: context.l10n.t('trustedVolunteer'),
-            subtitle: context.l10n.t('trustedVolunteerSubtitle'),
+            subtitle:
+                '${stats.completedTasksCount} completed tasks with shared community trust',
             color: ElderLinkTheme.purple,
             backgroundColor: const Color(0xFFF3EEFF),
           ),

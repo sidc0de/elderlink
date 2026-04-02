@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../main.dart';
 import '../../models/help_request.dart';
+import '../../repositories/chat_repository.dart';
 import '../../repositories/request_repository.dart';
 import '../../services/mock_auth_service.dart';
 import '../../ui/app_ui.dart';
+import '../shared/request_chat_thread_screen.dart';
 
 class VolunteerMyTasksScreen extends StatefulWidget {
   final bool embedded;
@@ -23,14 +25,19 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen>
   late final AnimationController _animController;
   late final Animation<double> _fadeAnim;
   late final Animation<Offset> _slideAnim;
+  late final ChatRepository _chatRepository;
+  late final RequestRepository _repository;
+  late final String _volunteerId;
 
   int _selectedTab = 0;
   bool _isLoading = true;
-  List<HelpRequest> _tasks = [];
 
   @override
   void initState() {
     super.initState();
+    _chatRepository = ChatRepository.instance;
+    _repository = RequestRepository.instance;
+    _volunteerId = MockAuthService.instance.userForRole(UserRole.volunteer).id;
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -52,56 +59,73 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen>
 
   Future<void> _loadTasks() async {
     await MockAuthService.instance.signInAs(UserRole.volunteer);
-    final volunteer = MockAuthService.instance.currentUser;
-    final items = await RequestRepository.instance.fetchVolunteerAssignedRequests(
-      volunteer.id,
-    );
     if (!mounted) return;
-    setState(() {
-      _tasks = items;
-      _isLoading = false;
-    });
+    setState(() => _isLoading = false);
   }
 
-  List<_VolunteerTaskItem> get _filteredTasks {
-    final mapped = _tasks.map(_mapTask).toList();
+  List<HelpRequest> _filteredTasks() {
+    final tasks = _repository.getVolunteerAssignedRequestsSnapshot(_volunteerId);
     switch (_selectedTab) {
       case 1:
-        return mapped
-            .where((task) => task.status != _TaskStatus.completed)
+        return tasks
+            .where((task) => task.status != RequestStatus.completed)
             .toList();
       case 2:
-        return mapped
-            .where((task) => task.status == _TaskStatus.completed)
+        return tasks
+            .where((task) => task.status == RequestStatus.completed)
             .toList();
       default:
-        return mapped;
+        return tasks;
     }
   }
 
-  _VolunteerTaskItem _mapTask(HelpRequest task) {
-    return _VolunteerTaskItem(
-      elderName: task.elderName,
-      elderInitials: task.elderInitials,
-      elderColor: task.elderColor,
-      title: task.title,
-      subtitle: task.subtitle,
-      status: _statusFromRequest(task.status),
-      category: task.category,
+  Future<void> _runAction(HelpRequest task) async {
+    switch (task.status) {
+      case RequestStatus.accepted:
+        await _repository.startRequest(task.id);
+        _showSnackbar('Task started: ${task.title}', ElderLinkTheme.purple);
+        break;
+      case RequestStatus.inProgress:
+        await _repository.completeRequest(task.id);
+        _showSnackbar('Task completed: ${task.title}', ElderLinkTheme.statusAcceptedText);
+        break;
+      default:
+        break;
+    }
+  }
+
+  void _showSnackbar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+      ),
     );
   }
 
-  _TaskStatus _statusFromRequest(RequestStatus status) {
-    switch (status) {
-      case RequestStatus.completed:
-        return _TaskStatus.completed;
-      case RequestStatus.inProgress:
-        return _TaskStatus.inProgress;
-      case RequestStatus.pending:
-      case RequestStatus.accepted:
-      case RequestStatus.cancelled:
-        return _TaskStatus.upcoming;
-    }
+  void _openChat(HelpRequest task) {
+    final volunteerId = task.volunteerId;
+    if (volunteerId == null) return;
+
+    final thread = _chatRepository.getOrCreateThreadForRequest(
+      requestId: task.id,
+      elderId: task.elderId,
+      volunteerId: volunteerId,
+    );
+    if (thread == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RequestChatThreadScreen(threadId: thread.id),
+      ),
+    );
   }
 
   @override
@@ -111,63 +135,76 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen>
             color: ElderLinkTheme.purple,
             message: 'Loading your tasks...',
           )
-        : CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const AppScreenHeader(
-                        title: 'My Tasks',
+        : AnimatedBuilder(
+            animation: _repository,
+            builder: (context, _) {
+              final allTasks =
+                  _repository.getVolunteerAssignedRequestsSnapshot(_volunteerId);
+              final tasks = _filteredTasks();
+
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const AppScreenHeader(
+                            title: 'My Tasks',
+                            subtitle:
+                                'Track accepted requests and completed support',
+                          ),
+                          const SizedBox(height: 16),
+                          AppSummaryCard(
+                            icon: Icons.checklist_rounded,
+                            iconColor: ElderLinkTheme.purple,
+                            iconBackground: const Color(0xFFF3EEFF),
+                            title: '${allTasks.length} task updates',
+                            subtitle: 'See what is upcoming, active, and completed',
+                          ),
+                          const SizedBox(height: 12),
+                          _TaskTabs(
+                            selectedTab: _selectedTab,
+                            onChanged: (index) =>
+                                setState(() => _selectedTab = index),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (tasks.isEmpty)
+                    const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: AppEmptyState(
+                        emoji: '🗂️',
+                        title: 'No tasks here yet',
                         subtitle:
-                            'Track accepted requests and completed support',
+                            'Accepted and completed requests will appear here.',
                       ),
-                      const SizedBox(height: 16),
-                      AppSummaryCard(
-                        icon: Icons.checklist_rounded,
-                        iconColor: ElderLinkTheme.purple,
-                        iconBackground: const Color(0xFFF3EEFF),
-                        title: '${_tasks.length} task updates',
-                        subtitle: 'See what is upcoming, active, and completed',
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                      sliver: SliverList.builder(
+                        itemCount: tasks.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: index == tasks.length - 1 ? 0 : 12,
+                            ),
+                            child: _TaskCard(
+                              task: tasks[index],
+                              onAction: () => _runAction(tasks[index]),
+                              onOpenChat: () => _openChat(tasks[index]),
+                            ),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 12),
-                      _TaskTabs(
-                        selectedTab: _selectedTab,
-                        onChanged: (index) =>
-                            setState(() => _selectedTab = index),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (_filteredTasks.isEmpty)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: AppEmptyState(
-                    emoji: '🗂️',
-                    title: 'No tasks here yet',
-                    subtitle:
-                        'Accepted and completed requests will appear here.',
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  sliver: SliverList.builder(
-                    itemCount: _filteredTasks.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          bottom: index == _filteredTasks.length - 1 ? 0 : 12,
-                        ),
-                        child: _TaskCard(task: _filteredTasks[index]),
-                      );
-                    },
-                  ),
-                ),
-            ],
+                    ),
+                ],
+              );
+            },
           );
 
     final content = SafeArea(
@@ -236,16 +273,43 @@ class _TaskTabs extends StatelessWidget {
 }
 
 class _TaskCard extends StatelessWidget {
-  final _VolunteerTaskItem task;
+  final HelpRequest task;
+  final VoidCallback onAction;
+  final VoidCallback onOpenChat;
 
-  const _TaskCard({required this.task});
+  const _TaskCard({
+    required this.task,
+    required this.onAction,
+    required this.onOpenChat,
+  });
+
+  String? get _actionLabel {
+    switch (task.status) {
+      case RequestStatus.accepted:
+        return 'Start Task';
+      case RequestStatus.inProgress:
+        return 'Mark Completed';
+      default:
+        return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return AppSurfaceCard(
+      border: Border.all(
+        color: task.isEmergency
+            ? const Color(0xFFFFB4A1)
+            : ElderLinkTheme.borderLight,
+        width: task.isEmergency ? 1.6 : 1,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (task.isEmergency) ...[
+            const AppEmergencyBadge(label: 'Emergency'),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               AppAvatar(
@@ -260,7 +324,7 @@ class _TaskCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              _StatusBadge(status: task.status),
+              AppRequestStatusChip(status: task.status),
             ],
           ),
           const SizedBox(height: 14),
@@ -269,60 +333,60 @@ class _TaskCard extends StatelessWidget {
           Text(task.title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(task.subtitle, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onOpenChat,
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                  label: const Text('Message'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_actionLabel != null)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onAction,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ElderLinkTheme.purple,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(46),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  _actionLabel!,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            )
+          else
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppPill(
+                label: task.status == RequestStatus.completed
+                    ? 'Completed'
+                    : task.status == RequestStatus.cancelled
+                        ? 'Cancelled'
+                        : 'Waiting',
+                textColor: task.status == RequestStatus.completed
+                    ? ElderLinkTheme.statusAcceptedText
+                    : ElderLinkTheme.textSecondary,
+                backgroundColor: task.status == RequestStatus.completed
+                    ? ElderLinkTheme.statusAccepted
+                    : ElderLinkTheme.surfaceMuted,
+              ),
+            ),
         ],
       ),
     );
   }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final _TaskStatus status;
-
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    switch (status) {
-      case _TaskStatus.upcoming:
-        return const AppPill(
-          label: 'Upcoming',
-          textColor: Color(0xFFF9A825),
-          backgroundColor: Color(0xFFFFF8E1),
-        );
-      case _TaskStatus.inProgress:
-        return const AppPill(
-          label: 'In Progress',
-          textColor: ElderLinkTheme.purple,
-          backgroundColor: Color(0xFFF3EEFF),
-        );
-      case _TaskStatus.completed:
-        return const AppPill(
-          label: 'Completed',
-          textColor: ElderLinkTheme.statusAcceptedText,
-          backgroundColor: ElderLinkTheme.statusAccepted,
-        );
-    }
-  }
-}
-
-enum _TaskStatus { upcoming, inProgress, completed }
-
-class _VolunteerTaskItem {
-  final String elderName;
-  final String elderInitials;
-  final Color elderColor;
-  final String title;
-  final String subtitle;
-  final _TaskStatus status;
-  final RequestCategory category;
-
-  const _VolunteerTaskItem({
-    required this.elderName,
-    required this.elderInitials,
-    required this.elderColor,
-    required this.title,
-    required this.subtitle,
-    required this.status,
-    required this.category,
-  });
 }

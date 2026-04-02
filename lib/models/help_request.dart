@@ -23,9 +23,16 @@ class HelpRequest {
   final int? volunteerColorValue;
   final double distanceKm;
   final bool isUrgent;
+  final bool isEmergency;
   final bool isDeleted;
   final bool hasAudio;
   final String? audioLocalPath;
+  final bool isRated;
+  final int? rating;
+  final String? feedback;
+  final DateTime? ratedAt;
+  final String? ratedVolunteerId;
+  final DateTime? emergencyCreatedAt;
   final DateTime createdAt;
 
   const HelpRequest({
@@ -49,9 +56,16 @@ class HelpRequest {
     this.volunteerColorValue,
     required this.distanceKm,
     required this.isUrgent,
+    this.isEmergency = false,
     required this.isDeleted,
     required this.hasAudio,
     this.audioLocalPath,
+    this.isRated = false,
+    this.rating,
+    this.feedback,
+    this.ratedAt,
+    this.ratedVolunteerId,
+    this.emergencyCreatedAt,
     required this.createdAt,
   });
 
@@ -80,9 +94,16 @@ class HelpRequest {
     int? volunteerColorValue,
     double? distanceKm,
     bool? isUrgent,
+    bool? isEmergency,
     bool? isDeleted,
     bool? hasAudio,
     String? audioLocalPath,
+    bool? isRated,
+    int? rating,
+    String? feedback,
+    DateTime? ratedAt,
+    String? ratedVolunteerId,
+    DateTime? emergencyCreatedAt,
     DateTime? createdAt,
   }) {
     return HelpRequest(
@@ -106,9 +127,16 @@ class HelpRequest {
       volunteerColorValue: volunteerColorValue ?? this.volunteerColorValue,
       distanceKm: distanceKm ?? this.distanceKm,
       isUrgent: isUrgent ?? this.isUrgent,
+      isEmergency: isEmergency ?? this.isEmergency,
       isDeleted: isDeleted ?? this.isDeleted,
       hasAudio: hasAudio ?? this.hasAudio,
       audioLocalPath: audioLocalPath ?? this.audioLocalPath,
+      isRated: isRated ?? this.isRated,
+      rating: rating ?? this.rating,
+      feedback: feedback ?? this.feedback,
+      ratedAt: ratedAt ?? this.ratedAt,
+      ratedVolunteerId: ratedVolunteerId ?? this.ratedVolunteerId,
+      emergencyCreatedAt: emergencyCreatedAt ?? this.emergencyCreatedAt,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -139,9 +167,20 @@ class HelpRequest {
       volunteerColorValue: map['volunteerColorValue'] as int?,
       distanceKm: (map['distanceKm'] as num).toDouble(),
       isUrgent: map['isUrgent'] as bool? ?? false,
+      isEmergency: map['isEmergency'] as bool? ?? false,
       isDeleted: map['isDeleted'] as bool? ?? false,
       hasAudio: map['hasAudio'] as bool? ?? false,
       audioLocalPath: map['audioLocalPath'] as String?,
+      isRated: map['isRated'] as bool? ?? false,
+      rating: map['rating'] as int?,
+      feedback: map['feedback'] as String?,
+      ratedAt: map['ratedAt'] == null
+          ? null
+          : DateTime.parse(map['ratedAt'] as String),
+      ratedVolunteerId: map['ratedVolunteerId'] as String?,
+      emergencyCreatedAt: map['emergencyCreatedAt'] == null
+          ? null
+          : DateTime.parse(map['emergencyCreatedAt'] as String),
       createdAt: DateTime.parse(map['createdAt'] as String),
     );
   }
@@ -168,9 +207,16 @@ class HelpRequest {
       'volunteerColorValue': volunteerColorValue,
       'distanceKm': distanceKm,
       'isUrgent': isUrgent,
+      'isEmergency': isEmergency,
       'isDeleted': isDeleted,
       'hasAudio': hasAudio,
       'audioLocalPath': audioLocalPath,
+      'isRated': isRated,
+      'rating': rating,
+      'feedback': feedback,
+      'ratedAt': ratedAt?.toIso8601String(),
+      'ratedVolunteerId': ratedVolunteerId,
+      'emergencyCreatedAt': emergencyCreatedAt?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
     };
   }

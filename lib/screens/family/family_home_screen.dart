@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../repositories/dashboard_repository.dart';
+import '../../repositories/request_repository.dart';
 import '../../services/mock_auth_service.dart';
 import '../../ui/app_ui.dart';
 import 'family_messages_screen.dart';
@@ -162,6 +163,7 @@ class FamilyHomeScreen extends StatefulWidget {
 
 class _FamilyHomeScreenState extends State<FamilyHomeScreen>
     with SingleTickerProviderStateMixin {
+  late final RequestRepository _requestRepository;
   int _bottomNavIndex = 0;
   bool _alertDismissed = false;
   bool _isLoading = true;
@@ -176,6 +178,7 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
   @override
   void initState() {
     super.initState();
+    _requestRepository = RequestRepository.instance;
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -186,13 +189,20 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _animController.forward();
+    _requestRepository.addListener(_handleRepositoryUpdate);
     _loadDashboard();
   }
 
   @override
   void dispose() {
+    _requestRepository.removeListener(_handleRepositoryUpdate);
     _animController.dispose();
     super.dispose();
+  }
+
+  void _handleRepositoryUpdate() {
+    if (!mounted) return;
+    _loadDashboard();
   }
 
   void _showSnackbar(String msg, Color color) {

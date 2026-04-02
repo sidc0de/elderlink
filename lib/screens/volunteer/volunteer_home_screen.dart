@@ -25,6 +25,7 @@ class VolunteerTask {
   final String timeLabel;
   final double distanceKm;
   final bool isUrgent;
+  final bool isEmergency;
 
   const VolunteerTask({
     required this.id,
@@ -39,6 +40,7 @@ class VolunteerTask {
     required this.timeLabel,
     required this.distanceKm,
     this.isUrgent = false,
+    this.isEmergency = false,
   });
 }
 
@@ -134,6 +136,7 @@ class VolunteerHomeScreen extends StatefulWidget {
 
 class _VolunteerHomeScreenState extends State<VolunteerHomeScreen>
     with SingleTickerProviderStateMixin {
+  late final RequestRepository _requestRepository;
   RequestCategory? _activeFilter;
   int _bottomNavIndex = 0;
   String _sortBy = 'distance'; // 'distance' | 'time' | 'urgent'
@@ -147,6 +150,7 @@ class _VolunteerHomeScreenState extends State<VolunteerHomeScreen>
   @override
   void initState() {
     super.initState();
+    _requestRepository = RequestRepository.instance;
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -157,13 +161,20 @@ class _VolunteerHomeScreenState extends State<VolunteerHomeScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _animController.forward();
+    _requestRepository.addListener(_handleRepositoryUpdate);
     _loadDashboard();
   }
 
   @override
   void dispose() {
+    _requestRepository.removeListener(_handleRepositoryUpdate);
     _animController.dispose();
     super.dispose();
+  }
+
+  void _handleRepositoryUpdate() {
+    if (!mounted) return;
+    _loadDashboard();
   }
 
   List<VolunteerTask> get _filteredTasks {
@@ -184,6 +195,20 @@ class _VolunteerHomeScreenState extends State<VolunteerHomeScreen>
         break;
     }
     return tasks;
+  }
+
+  VolunteerTask? get _activeEmergencyTask {
+    final volunteerId = MockAuthService.instance.userForRole(UserRole.volunteer).id;
+    final requests =
+        _requestRepository.getVolunteerAssignedRequestsSnapshot(volunteerId);
+    for (final request in requests) {
+      if (request.isEmergency &&
+          request.status != RequestStatus.completed &&
+          request.status != RequestStatus.cancelled) {
+        return _taskFromHelpRequest(request);
+      }
+    }
+    return null;
   }
 
   Future<void> _loadDashboard() async {
@@ -216,6 +241,7 @@ class _VolunteerHomeScreenState extends State<VolunteerHomeScreen>
       timeLabel: request.timeLabel as String,
       distanceKm: request.distanceKm as double,
       isUrgent: request.isUrgent as bool,
+      isEmergency: request.isEmergency as bool? ?? false,
     );
   }
 
@@ -340,6 +366,10 @@ class _VolunteerHomeScreenState extends State<VolunteerHomeScreen>
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(child: _buildHero()),
+                  if (_activeEmergencyTask != null)
+                    SliverToBoxAdapter(
+                      child: _EmergencyAssignmentBanner(task: _activeEmergencyTask!),
+                    ),
                   SliverToBoxAdapter(child: _buildFilterRow()),
                   SliverToBoxAdapter(child: _buildSortRow()),
                   if (_filteredTasks.isEmpty)
@@ -701,7 +731,7 @@ class _TaskCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: AppConstants.cardShadow,
-          border: task.isUrgent
+          border: (task.isUrgent || task.isEmergency)
               ? Border.all(color: const Color(0xFFFF6B35), width: 1.5)
               : null,
         ),
@@ -709,7 +739,7 @@ class _TaskCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Urgent banner
-            if (task.isUrgent)
+            if (task.isUrgent || task.isEmergency)
               Container(
                 width: double.infinity,
                 padding:
@@ -834,6 +864,55 @@ class _TaskCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _EmergencyAssignmentBanner extends StatelessWidget {
+  final VolunteerTask task;
+
+  const _EmergencyAssignmentBanner({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFFB4A1), width: 1.5),
+        boxShadow: AppConstants.cardShadow,
+      ),
+      child: Row(
+        children: [
+          const AppEmergencyBadge(label: 'SOS Assigned'),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.elderName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: ElderLinkTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  task.title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: ElderLinkTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

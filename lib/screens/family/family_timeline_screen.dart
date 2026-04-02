@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../main.dart';
+import '../../repositories/request_repository.dart';
+import '../../services/mock_auth_service.dart';
 import '../../ui/app_ui.dart';
 
 class FamilyTimelineScreen extends StatefulWidget {
@@ -20,47 +22,16 @@ class _FamilyTimelineScreenState extends State<FamilyTimelineScreen>
   late final AnimationController _animController;
   late final Animation<double> _fadeAnim;
   late final Animation<Offset> _slideAnim;
+  late final RequestRepository _repository;
 
   int _selectedTab = 0;
-
-  final List<_TimelineEntry> _entries = const [
-    _TimelineEntry(
-      emoji: '✅',
-      title: 'Medicine pickup completed',
-      subtitle: 'Rohit Kumar delivered medicines from Apollo Pharmacy',
-      timeAgo: '2 hours ago',
-      bgColor: ElderLinkTheme.statusAccepted,
-      accentColor: ElderLinkTheme.statusAcceptedText,
-    ),
-    _TimelineEntry(
-      emoji: '😊',
-      title: 'Mood check-in logged',
-      subtitle: 'Sunita reported feeling happy this morning',
-      timeAgo: 'Today, 9:15 AM',
-      bgColor: Color(0xFFFFF5F2),
-      accentColor: ElderLinkTheme.orange,
-    ),
-    _TimelineEntry(
-      emoji: '🙋',
-      title: 'Volunteer accepted request',
-      subtitle: 'Ananya P. accepted the vegetable pickup request',
-      timeAgo: 'This morning',
-      bgColor: Color(0xFFF3EEFF),
-      accentColor: ElderLinkTheme.purple,
-    ),
-    _TimelineEntry(
-      emoji: '💬',
-      title: 'New conversation started',
-      subtitle: 'Rohit shared an ETA update in messages',
-      timeAgo: 'Yesterday',
-      bgColor: ElderLinkTheme.statusCompleted,
-      accentColor: ElderLinkTheme.statusCompletedText,
-    ),
-  ];
+  List<RequestTimelineEvent> _events = const [];
+  Set<String> _newEventIds = const {};
 
   @override
   void initState() {
     super.initState();
+    _repository = RequestRepository.instance;
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -70,26 +41,57 @@ class _FamilyTimelineScreenState extends State<FamilyTimelineScreen>
       begin: const Offset(0, 0.06),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _events = _repository.getTimelineEventsSnapshot(_currentElderId);
+    _repository.addListener(_handleTimelineUpdate);
     _animController.forward();
   }
 
   @override
   void dispose() {
+    _repository.removeListener(_handleTimelineUpdate);
     _animController.dispose();
     super.dispose();
   }
 
-  List<_TimelineEntry> get _filteredEntries {
+  String get _currentElderId =>
+      MockAuthService.instance.userForRole(UserRole.elder).id;
+
+  void _handleTimelineUpdate() {
+    final nextEvents = _repository.getTimelineEventsSnapshot(_currentElderId);
+    final currentIds = _events.map((event) => event.id).toSet();
+    final addedIds = nextEvents
+        .where((event) => !currentIds.contains(event.id))
+        .map((event) => event.id)
+        .toSet();
+
+    if (!mounted) return;
+    setState(() {
+      _events = nextEvents;
+      _newEventIds = addedIds;
+    });
+    if (addedIds.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _newEventIds = const {});
+      });
+    }
+  }
+
+  List<RequestTimelineEvent> _filteredEvents() {
     switch (_selectedTab) {
       case 1:
-        return _entries.where((entry) => entry.emoji == '✅').toList();
+        return _events
+            .where((event) => event.status == RequestStatus.completed)
+            .toList();
       default:
-        return _entries;
+        return _events;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final events = _filteredEvents();
+
     final content = SafeArea(
       child: FadeTransition(
         opacity: _fadeAnim,
@@ -106,48 +108,52 @@ class _FamilyTimelineScreenState extends State<FamilyTimelineScreen>
                       const AppScreenHeader(
                         title: 'Timeline',
                         subtitle:
-                            'Track your elder’s updates and completed help',
+                            'Track your elder’s updates and support progress',
                       ),
                       const SizedBox(height: 16),
                       AppSummaryCard(
                         icon: Icons.timeline_rounded,
                         iconColor: ElderLinkTheme.deepBlue,
                         iconBackground: const Color(0xFFF0F4FF),
-                        title: '${_entries.length} recent updates',
+                        title: '${_events.length} recent updates',
                         subtitle:
-                            'A quick view of support activity and wellbeing',
+                            'Live request activity from the shared request feed',
                       ),
                       const SizedBox(height: 12),
                       _TimelineTabs(
                         selectedTab: _selectedTab,
-                        onChanged: (value) =>
-                            setState(() => _selectedTab = value),
+                        onChanged: (value) => setState(() => _selectedTab = value),
                       ),
                     ],
                   ),
                 ),
               ),
-              if (_filteredEntries.isEmpty)
+              if (events.isEmpty)
                 const SliverFillRemaining(
                   hasScrollBody: false,
                   child: AppEmptyState(
                     emoji: '📖',
                     title: 'No updates here yet',
                     subtitle:
-                        'Completed support activity will appear here for your review.',
+                        'Request status changes will appear here for your review.',
                   ),
                 )
               else
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   sliver: SliverList.builder(
-                    itemCount: _filteredEntries.length,
+                    itemCount: events.length,
                     itemBuilder: (context, index) {
+                      final event = events[index];
                       return Padding(
                         padding: EdgeInsets.only(
-                          bottom: index == _filteredEntries.length - 1 ? 0 : 12,
+                          bottom: index == events.length - 1 ? 0 : 12,
                         ),
-                        child: _TimelineCard(entry: _filteredEntries[index]),
+                        child: _AnimatedTimelineEntry(
+                          key: ValueKey(event.id),
+                          animateOnMount: _newEventIds.contains(event.id),
+                          child: _TimelineCard(event: event),
+                        ),
                       );
                     },
                   ),
@@ -213,13 +219,113 @@ class _TimelineTabs extends StatelessWidget {
   }
 }
 
-class _TimelineCard extends StatelessWidget {
-  final _TimelineEntry entry;
+class _AnimatedTimelineEntry extends StatefulWidget {
+  final Widget child;
+  final bool animateOnMount;
 
-  const _TimelineCard({required this.entry});
+  const _AnimatedTimelineEntry({
+    super.key,
+    required this.child,
+    required this.animateOnMount,
+  });
+
+  @override
+  State<_AnimatedTimelineEntry> createState() => _AnimatedTimelineEntryState();
+}
+
+class _AnimatedTimelineEntryState extends State<_AnimatedTimelineEntry> {
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _visible = !widget.animateOnMount;
+    if (widget.animateOnMount) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _visible = true);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedSlide(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      offset: _visible ? Offset.zero : const Offset(0, 0.08),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+        opacity: _visible ? 1 : 0,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class _TimelineCard extends StatelessWidget {
+  final RequestTimelineEvent event;
+
+  const _TimelineCard({required this.event});
+
+  ({String emoji, Color bgColor, Color accentColor}) _meta() {
+    final lowerTitle = event.title.toLowerCase();
+    if (lowerTitle.contains('sos') || lowerTitle.contains('emergency')) {
+      return (
+        emoji: '🚨',
+        bgColor: const Color(0xFFFFF0EB),
+        accentColor: Colors.red,
+      );
+    }
+
+    switch (event.status) {
+      case RequestStatus.pending:
+        return (
+          emoji: '📝',
+          bgColor: ElderLinkTheme.statusPending,
+          accentColor: ElderLinkTheme.statusPendingText,
+        );
+      case RequestStatus.accepted:
+        return (
+          emoji: '🙋',
+          bgColor: const Color(0xFFF3EEFF),
+          accentColor: ElderLinkTheme.purple,
+        );
+      case RequestStatus.inProgress:
+        return (
+          emoji: '🚶',
+          bgColor: ElderLinkTheme.statusCompleted,
+          accentColor: ElderLinkTheme.statusCompletedText,
+        );
+      case RequestStatus.completed:
+        return (
+          emoji: '✅',
+          bgColor: ElderLinkTheme.statusAccepted,
+          accentColor: ElderLinkTheme.statusAcceptedText,
+        );
+      case RequestStatus.cancelled:
+        return (
+          emoji: '✖',
+          bgColor: const Color(0xFFFCEBEB),
+          accentColor: ElderLinkTheme.danger,
+        );
+    }
+  }
+
+  String _timeAgo() {
+    final difference = DateTime.now().difference(event.createdAt);
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inHours < 1) return '${difference.inMinutes} min ago';
+    if (difference.inDays < 1) return '${difference.inHours}h ago';
+    if (difference.inDays == 1) return 'Yesterday';
+    return '${difference.inDays} days ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = _meta();
+
     return AppSurfaceCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,10 +335,10 @@ class _TimelineCard extends StatelessWidget {
             height: 46,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: entry.bgColor,
+              color: meta.bgColor,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Text(entry.emoji, style: const TextStyle(fontSize: 20)),
+            child: Text(meta.emoji, style: const TextStyle(fontSize: 20)),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -240,19 +346,19 @@ class _TimelineCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.title,
+                  event.title,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  entry.subtitle,
+                  event.subtitle,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  entry.timeAgo,
+                  _timeAgo(),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: entry.accentColor,
+                        color: meta.accentColor,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
@@ -263,22 +369,4 @@ class _TimelineCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _TimelineEntry {
-  final String emoji;
-  final String title;
-  final String subtitle;
-  final String timeAgo;
-  final Color bgColor;
-  final Color accentColor;
-
-  const _TimelineEntry({
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
-    required this.timeAgo,
-    required this.bgColor,
-    required this.accentColor,
-  });
 }

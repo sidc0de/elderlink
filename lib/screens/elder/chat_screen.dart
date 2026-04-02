@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../models/chat_thread.dart';
 import '../../repositories/chat_repository.dart';
@@ -57,6 +58,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final content = SafeArea(
       child: FadeTransition(
         opacity: _fadeAnimation,
@@ -69,22 +71,17 @@ class _ChatScreenState extends State<ChatScreen>
               return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 children: [
-                  const AppScreenHeader(
-                    title: 'Messages',
-                    subtitle: 'Chat with volunteers assigned to your requests',
+                  AppScreenHeader(
+                    title: l10n.t('messages'),
+                    subtitle: l10n.t('messagesSubtitle'),
                   ),
                   const SizedBox(height: 16),
                   AppSummaryCard(
                     icon: Icons.chat_bubble_outline_rounded,
                     iconColor: ElderLinkTheme.orange,
                     iconBackground: const Color(0xFFFFF0EB),
-                    title: '${conversations.length} shared chats',
-                    subtitle: 'Your active request conversations stay synced here',
-                    trailing: const AppPill(
-                      label: 'Demo 2 max',
-                      textColor: ElderLinkTheme.orange,
-                      backgroundColor: Color(0xFFFFF5F2),
-                    ),
+                    title: l10n.activeThreadsCount(conversations.length),
+                    subtitle: l10n.t('sharedChatsSyncedHere'),
                   ),
                   const SizedBox(height: 14),
                   AnimatedSwitcher(
@@ -92,12 +89,11 @@ class _ChatScreenState extends State<ChatScreen>
                     switchInCurve: Curves.easeOut,
                     switchOutCurve: Curves.easeIn,
                     child: conversations.isEmpty
-                        ? const AppEmptyState(
-                            key: ValueKey('chat-empty'),
+                        ? AppEmptyState(
+                            key: const ValueKey('chat-empty'),
                             emoji: '💬',
-                            title: 'No chats yet',
-                            subtitle:
-                                'Once a volunteer is assigned, your request chat will appear here.',
+                            title: l10n.t('noChatsYetTitle'),
+                            subtitle: l10n.t('noChatsYetSubtitle'),
                           )
                         : Column(
                             key: const ValueKey('chat-list'),
@@ -155,6 +151,7 @@ class _ConversationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final repository = ChatRepository.instance;
     final request = repository.getRequestSnapshot(thread.requestId);
     final lastMessage = thread.messages.isEmpty ? null : thread.messages.last;
@@ -220,7 +217,7 @@ class _ConversationCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _formatThreadTime(thread.updatedAt),
+                          _formatThreadTime(context, thread.updatedAt),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -230,7 +227,7 @@ class _ConversationCard extends StatelessWidget {
                     if (request != null) ...[
                       const SizedBox(height: 6),
                       if (request.isEmergency)
-                        const AppEmergencyBadge(label: 'Emergency')
+                        AppEmergencyBadge(label: l10n.t('urgent'))
                       else
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -253,7 +250,7 @@ class _ConversationCard extends StatelessWidget {
                     ],
                     const SizedBox(height: 10),
                     Text(
-                      lastMessage?.text ?? 'Start the conversation',
+                      lastMessage?.text ?? l10n.t('startConversation'),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -295,18 +292,19 @@ class _ConversationCard extends StatelessWidget {
     );
   }
 
-  static String _formatThreadTime(DateTime updatedAt) {
+  static String _formatThreadTime(BuildContext context, DateTime updatedAt) {
+    final l10n = context.l10n;
     final now = DateTime.now();
     final difference = now.difference(updatedAt);
     if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return l10n.format('daysAgoShort', {'count': '${difference.inDays}'});
     }
     if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return l10n.format('hoursAgoShort', {'count': '${difference.inHours}'});
     }
     if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return l10n.format('minutesAgoShort', {'count': '${difference.inMinutes}'});
     }
-    return 'Now';
+    return l10n.t('now');
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../main.dart';
 import '../services/mock_auth_service.dart';
 import 'elder/elder_home_screen.dart';
@@ -45,14 +46,23 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String get _roleLabel {
+    final l10n = AppLocalizations.of(context);
     switch (widget.role) {
       case UserRole.elder:
-        return 'Elder';
+        return l10n.t('roleElder');
       case UserRole.volunteer:
-        return 'Caregiver';
+        return l10n.t('roleCaregiver');
       case UserRole.family:
-        return 'Family';
+        return l10n.t('roleFamilyShort');
     }
+  }
+
+  String _withoutDemoText(String value) {
+    return value
+        .replaceAll(RegExp(r'\bdemo\b\s*', caseSensitive: false), '')
+        .replaceAll('डेमो ', '')
+        .replaceAll(RegExp(r'\s{2,}'), ' ')
+        .trim();
   }
 
   Future<void> _login() async {
@@ -67,14 +77,20 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid demo credentials for the selected role.'),
+        SnackBar(
+          content: Text(
+            _withoutDemoText(context.l10n.t('invalidDemoCredentials')),
+          ),
         ),
       );
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Logged in as ${user.name}')),
+      SnackBar(
+        content: Text(
+          context.l10n.format('loggedInAs', {'name': user.name}),
+        ),
+      ),
     );
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => _dashboardForRole(widget.role)),
@@ -83,6 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: ElderLinkTheme.background,
       appBar: AppBar(
@@ -131,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Login as $_roleLabel',
+                    l10n.format('loginAsRole', {'role': _roleLabel}),
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
@@ -139,14 +156,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Use the demo account below to continue to your dashboard.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.55,
-                      color: ElderLinkTheme.textSecondary,
-                    ),
-                  ),
                   const SizedBox(height: 24),
                   Card(
                     margin: EdgeInsets.zero,
@@ -160,13 +169,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
+                              decoration: InputDecoration(
+                                labelText: l10n.t('email'),
                                 prefixIcon: Icon(Icons.email_outlined),
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Enter your email';
+                                  return l10n.t('enterYourEmail');
                                 }
                                 return null;
                               },
@@ -176,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: _passwordController,
                               obscureText: _obscurePassword,
                               decoration: InputDecoration(
-                                labelText: 'Password',
+                                labelText: l10n.t('password'),
                                 prefixIcon:
                                     const Icon(Icons.lock_outline_rounded),
                                 suffixIcon: IconButton(
@@ -194,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Enter your password';
+                                  return l10n.t('enterYourPassword');
                                 }
                                 return null;
                               },
@@ -214,15 +223,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                           color: Colors.white,
                                         ),
                                       )
-                                    : const Text('Login'),
+                                    : Text(l10n.t('login')),
                               ),
                             ),
                             const SizedBox(height: 16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Text(
-                                  'Don\'t have an account? ',
+                                Text(
+                                  '${l10n.t('dontHaveAccount')} ',
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: ElderLinkTheme.textSecondary,
@@ -237,8 +246,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     );
                                   },
-                                  child: const Text(
-                                    'Sign Up',
+                                  child: Text(
+                                    l10n.t('signUp'),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
@@ -300,7 +309,7 @@ Future<void> performMockLogout(BuildContext context) async {
   await MockAuthService.instance.signOut();
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Logged out successfully.')),
+    SnackBar(content: Text(context.l10n.t('loggedOutSuccessfully'))),
   );
   Navigator.of(context).pushAndRemoveUntil(
     MaterialPageRoute(builder: (_) => const SplashScreen()),

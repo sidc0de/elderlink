@@ -39,6 +39,9 @@ class AppLocalizations {
     return languageMap[key] ?? _localizedValues['en']![key] ?? key;
   }
 
+  String format(String key, Map<String, String> values) =>
+      _format(t(key), values);
+
   String updatedJustNow() => t('updatedJustNow');
 
   String updatedMinutesAgo(int minutes) =>

@@ -23,7 +23,7 @@ class _FamilyMessagesScreenState extends State<FamilyMessagesScreen>
 
   final List<_MessageThread> _threads = const [
     _MessageThread(
-      name: 'Sunita Deshpande',
+      name: 'Ganesh Jagtap',
       initials: 'SD',
       avatarColor: ElderLinkTheme.orange,
       preview: 'I am feeling much better today. Thank you for checking in.',
@@ -32,7 +32,7 @@ class _FamilyMessagesScreenState extends State<FamilyMessagesScreen>
       isOnline: true,
     ),
     _MessageThread(
-      name: 'Rohit Kumar',
+      name: 'Siddhika Deshmukh',
       initials: 'RK',
       avatarColor: ElderLinkTheme.deepBlue,
       preview: 'Medicine pickup is complete. I have shared the receipt.',
@@ -41,7 +41,7 @@ class _FamilyMessagesScreenState extends State<FamilyMessagesScreen>
       isOnline: true,
     ),
     _MessageThread(
-      name: 'Ananya P.',
+      name: 'Siddhika Deshmukh',
       initials: 'AP',
       avatarColor: ElderLinkTheme.purple,
       preview: 'Vegetables delivered safely. She also looked cheerful today.',
@@ -213,3 +213,4 @@ class _MessageThread {
     required this.isOnline,
   });
 }
+

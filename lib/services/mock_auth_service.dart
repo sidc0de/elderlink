@@ -59,4 +59,52 @@ class MockAuthService {
     await Future.delayed(const Duration(milliseconds: 150));
     _signedInUser = null;
   }
+
+  Future<AppUser> updateCurrentUser({
+    required String name,
+    required String email,
+    required String phone,
+    required String address,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final current = currentUser;
+    final updated = current.copyWith(
+      name: name.trim(),
+      initials: _initialsForName(name),
+      email: email.trim(),
+      phone: phone.trim(),
+      address: address.trim(),
+      location: address.trim(),
+      emergencyContactName: emergencyContactName?.trim().isEmpty ?? true
+          ? null
+          : emergencyContactName!.trim(),
+      emergencyContactPhone: emergencyContactPhone?.trim().isEmpty ?? true
+          ? null
+          : emergencyContactPhone!.trim(),
+    );
+    _store.usersByRole[_activeRole] = updated;
+    if (updated.role == UserRole.volunteer) {
+      _store.volunteerUsersById[updated.id] = updated;
+    }
+    _signedInUser = updated;
+    return updated;
+  }
+
+  String _initialsForName(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) {
+      return currentUser.initials;
+    }
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
+  }
 }

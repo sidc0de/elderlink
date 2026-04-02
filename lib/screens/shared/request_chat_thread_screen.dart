@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../models/chat_thread.dart';
 import '../../repositories/chat_repository.dart';
@@ -57,6 +58,7 @@ class _RequestChatThreadScreenState extends State<RequestChatThreadScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUser = MockAuthService.instance.currentUser;
+    final l10n = context.l10n;
 
     return Scaffold(
       backgroundColor: ElderLinkTheme.background,
@@ -67,13 +69,15 @@ class _RequestChatThreadScreenState extends State<RequestChatThreadScreen> {
           builder: (context, _) {
             final thread = _chatRepository.getThreadById(widget.threadId);
             if (thread == null) {
-              return const Text('Chat');
+              return Text(l10n.t('chat'));
             }
             final request = _chatRepository.getRequestSnapshot(thread.requestId);
             final name =
                 _chatRepository.displayNameForThread(thread, currentUser.role);
             final roleLabel =
-                currentUser.role == UserRole.elder ? 'Volunteer' : 'Elder';
+                currentUser.role == UserRole.elder
+                    ? l10n.t('volunteerRole')
+                    : l10n.t('elderRole');
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,8 +94,8 @@ class _RequestChatThreadScreenState extends State<RequestChatThreadScreen> {
                   request == null
                       ? roleLabel
                       : request.isEmergency
-                          ? '$roleLabel - Emergency assistance'
-                          : '$roleLabel - ${request.category.label}',
+                          ? '$roleLabel - ${l10n.t('emergencyAssistance')}'
+                          : '$roleLabel - ${request.category.localizedLabel(l10n)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall,
@@ -110,12 +114,10 @@ class _RequestChatThreadScreenState extends State<RequestChatThreadScreen> {
                 builder: (context, _) {
                   final thread = _chatRepository.getThreadById(widget.threadId);
                   if (thread == null) {
-                    return const Center(child: Text('Chat unavailable'));
+                    return Center(child: Text(l10n.t('chatUnavailable')));
                   }
                   if (!_chatRepository.isParticipant(thread, currentUser.id)) {
-                    return const Center(
-                      child: Text('You do not have access to this chat'),
-                    );
+                    return Center(child: Text(l10n.t('chatAccessDenied')));
                   }
 
                   final request =
@@ -194,9 +196,9 @@ class _RequestChatThreadScreenState extends State<RequestChatThreadScreen> {
                                   color: ElderLinkTheme.surfaceMuted,
                                   borderRadius: BorderRadius.circular(999),
                                 ),
-                                child: Text(
-                                  request.isEmergency
-                                      ? 'Emergency'
+                                  child: Text(
+                                    request.isEmergency
+                                      ? l10n.t('urgent')
                                       : _statusLabel(request.status),
                                   style: const TextStyle(
                                     fontSize: 11,
@@ -280,8 +282,8 @@ class _RequestChatThreadScreenState extends State<RequestChatThreadScreen> {
                           textCapitalization: TextCapitalization.sentences,
                           minLines: 1,
                           maxLines: 4,
-                          decoration: const InputDecoration(
-                            hintText: 'Type a message',
+                          decoration: InputDecoration(
+                            hintText: l10n.t('typeMessage'),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
@@ -334,18 +336,19 @@ class _RequestChatThreadScreenState extends State<RequestChatThreadScreen> {
     );
   }
 
-  static String _statusLabel(RequestStatus status) {
+  String _statusLabel(RequestStatus status) {
+    final l10n = context.l10n;
     switch (status) {
       case RequestStatus.pending:
-        return 'Pending';
+        return l10n.t('pendingStatusTitle');
       case RequestStatus.accepted:
-        return 'Accepted';
+        return l10n.t('acceptedStatusTitle');
       case RequestStatus.inProgress:
-        return 'In Progress';
+        return l10n.t('inProgressStatusTitle');
       case RequestStatus.completed:
-        return 'Completed';
+        return l10n.t('completedStatusTitle');
       case RequestStatus.cancelled:
-        return 'Cancelled';
+        return l10n.t('cancelledStatusTitle');
     }
   }
 }
@@ -457,7 +460,7 @@ class _ChatBubble extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              _formatTimestamp(message.timestamp),
+              _formatTimestamp(context, message.timestamp),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: ElderLinkTheme.textSecondary.withOpacity(0.9),
                   ),
@@ -468,10 +471,12 @@ class _ChatBubble extends StatelessWidget {
     );
   }
 
-  static String _formatTimestamp(DateTime timestamp) {
+  static String _formatTimestamp(BuildContext context, DateTime timestamp) {
     final hour = timestamp.hour % 12 == 0 ? 12 : timestamp.hour % 12;
     final minute = timestamp.minute.toString().padLeft(2, '0');
-    final period = timestamp.hour >= 12 ? 'PM' : 'AM';
+    final l10n = AppLocalizations.of(context);
+    final period =
+        timestamp.hour >= 12 ? l10n.t('pmShort') : l10n.t('amShort');
     return '$hour:$minute $period';
   }
 }
@@ -503,12 +508,12 @@ class _ChatEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              'No messages yet',
+              context.l10n.t('noMessagesYet'),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              'Send a quick update to start this request conversation.',
+              context.l10n.t('sendQuickUpdateStartConversation'),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),

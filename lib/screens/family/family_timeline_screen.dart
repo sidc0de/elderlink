@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../repositories/request_repository.dart';
 import '../../services/mock_auth_service.dart';
@@ -90,6 +91,7 @@ class _FamilyTimelineScreenState extends State<FamilyTimelineScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final events = _filteredEvents();
 
     final content = SafeArea(
@@ -105,19 +107,17 @@ class _FamilyTimelineScreenState extends State<FamilyTimelineScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const AppScreenHeader(
-                        title: 'Timeline',
-                        subtitle:
-                            'Track your elder’s updates and support progress',
+                      AppScreenHeader(
+                        title: l10n.t('timeline'),
+                        subtitle: l10n.t('timelineTrackSubtitle'),
                       ),
                       const SizedBox(height: 16),
                       AppSummaryCard(
                         icon: Icons.timeline_rounded,
                         iconColor: ElderLinkTheme.deepBlue,
                         iconBackground: const Color(0xFFF0F4FF),
-                        title: '${_events.length} recent updates',
-                        subtitle:
-                            'Live request activity from the shared request feed',
+                        title: l10n.recentUpdatesCount(_events.length),
+                        subtitle: l10n.t('liveRequestActivitySharedFeed'),
                       ),
                       const SizedBox(height: 12),
                       _TimelineTabs(
@@ -129,13 +129,12 @@ class _FamilyTimelineScreenState extends State<FamilyTimelineScreen>
                 ),
               ),
               if (events.isEmpty)
-                const SliverFillRemaining(
+                SliverFillRemaining(
                   hasScrollBody: false,
                   child: AppEmptyState(
                     emoji: '📖',
-                    title: 'No updates here yet',
-                    subtitle:
-                        'Request status changes will appear here for your review.',
+                    title: l10n.t('noUpdatesYetTitle'),
+                    subtitle: l10n.t('noUpdatesYetSubtitle'),
                   ),
                 )
               else
@@ -184,11 +183,12 @@ class _TimelineTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const tabs = ['All', 'Completed'];
+    final l10n = context.l10n;
+    final tabs = [l10n.t('all'), l10n.t('completed')];
 
     return Row(
       children: [
-        const Expanded(child: AppSectionLabel(title: 'Recent Activity')),
+        Expanded(child: AppSectionLabel(title: l10n.t('recentActivity'))),
         ...List.generate(
           tabs.length,
           (index) => Padding(
@@ -313,13 +313,18 @@ class _TimelineCard extends StatelessWidget {
     }
   }
 
-  String _timeAgo() {
+  String _timeAgo(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final difference = DateTime.now().difference(event.createdAt);
-    if (difference.inMinutes < 1) return 'Just now';
-    if (difference.inHours < 1) return '${difference.inMinutes} min ago';
-    if (difference.inDays < 1) return '${difference.inHours}h ago';
-    if (difference.inDays == 1) return 'Yesterday';
-    return '${difference.inDays} days ago';
+    if (difference.inMinutes < 1) return l10n.t('justNow');
+    if (difference.inHours < 1) {
+      return l10n.format('minutesAgoShort', {'count': '${difference.inMinutes}'});
+    }
+    if (difference.inDays < 1) {
+      return l10n.format('hoursAgoShort', {'count': '${difference.inHours}'});
+    }
+    if (difference.inDays == 1) return l10n.t('yesterday');
+    return l10n.format('daysAgo', {'count': '${difference.inDays}'});
   }
 
   @override
@@ -356,7 +361,7 @@ class _TimelineCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  _timeAgo(),
+                  _timeAgo(context),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: meta.accentColor,
                         fontWeight: FontWeight.w700,

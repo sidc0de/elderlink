@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../../models/app_user.dart';
 import '../../repositories/request_repository.dart';
 import '../../services/mock_auth_service.dart';
 import '../login_screen.dart';
+import '../shared/edit_profile_screen.dart';
 import '../../ui/app_ui.dart';
 import '../../ui/language_selector.dart';
 
@@ -51,6 +53,7 @@ class _VolunteerProfileScreenState extends State<VolunteerProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    final user = MockAuthService.instance.userForRole(UserRole.volunteer);
     final content = SafeArea(
       child: FadeTransition(
         opacity: _fadeAnim,
@@ -67,13 +70,34 @@ class _VolunteerProfileScreenState extends State<VolunteerProfileScreen>
               AnimatedBuilder(
                 animation: _repository,
                 builder: (context, _) => _ProfileCard(
+                  user: user,
                   stats: _repository.getVolunteerRatingStats(
                     MockAuthService.instance.userForRole(UserRole.volunteer).id,
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-              const _MenuCard(),
+              _MenuCard(
+                onEditProfile: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen(
+                        role: UserRole.volunteer,
+                      ),
+                    ),
+                  );
+                  if (mounted) {
+                    setState(() {});
+                  }
+                },
+                onLogout: () async {
+                  final confirmed = await showLogoutConfirmationDialog(context);
+                  if (!confirmed || !context.mounted) {
+                    return;
+                  }
+                  await performMockLogout(context);
+                },
+              ),
             ],
           ),
         ),
@@ -90,9 +114,13 @@ class _VolunteerProfileScreenState extends State<VolunteerProfileScreen>
 }
 
 class _ProfileCard extends StatelessWidget {
+  final AppUser user;
   final VolunteerRatingStats stats;
 
-  const _ProfileCard({required this.stats});
+  const _ProfileCard({
+    required this.user,
+    required this.stats,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -100,10 +128,10 @@ class _ProfileCard extends StatelessWidget {
       padding: const EdgeInsets.all(22),
       child: Column(
         children: [
-          const _ProfileBadge(),
+          _ProfileBadge(user: user),
           const SizedBox(height: 14),
-          const Text(
-            'Rohit Kumar',
+          Text(
+            user.name,
             style: TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.w700,
@@ -111,8 +139,8 @@ class _ProfileCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'rohit.kumar@elderlink.app',
+          Text(
+            user.email ?? '',
             style: TextStyle(
               fontSize: 13,
               color: ElderLinkTheme.textSecondary,
@@ -150,7 +178,9 @@ class _ProfileCard extends StatelessWidget {
 }
 
 class _ProfileBadge extends StatelessWidget {
-  const _ProfileBadge();
+  final AppUser user;
+
+  const _ProfileBadge({required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -166,8 +196,8 @@ class _ProfileBadge extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: const Text(
-        'RK',
+      child: Text(
+        user.initials,
         style: TextStyle(
           fontSize: 26,
           fontWeight: FontWeight.w700,
@@ -179,7 +209,13 @@ class _ProfileBadge extends StatelessWidget {
 }
 
 class _MenuCard extends StatelessWidget {
-  const _MenuCard();
+  final VoidCallback onEditProfile;
+  final VoidCallback onLogout;
+
+  const _MenuCard({
+    required this.onEditProfile,
+    required this.onLogout,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -191,26 +227,11 @@ class _MenuCard extends StatelessWidget {
           subtitle: context.l10n.t('editProfileSubtitle'),
           accentColor: ElderLinkTheme.purple,
           iconBackground: const Color(0xFFF3EEFF),
+          onTap: onEditProfile,
         ),
         const Divider(height: 1),
         LanguageSettingsTile(
           subtitle: context.l10n.t('profileLanguageSubtitle'),
-        ),
-        const Divider(height: 1),
-        AppSettingsTile(
-          icon: Icons.notifications_outlined,
-          title: context.l10n.t('notifications'),
-          subtitle: context.l10n.t('notificationsSubtitle'),
-          accentColor: ElderLinkTheme.purple,
-          iconBackground: const Color(0xFFF3EEFF),
-        ),
-        const Divider(height: 1),
-        AppSettingsTile(
-          icon: Icons.help_outline_rounded,
-          title: context.l10n.t('support'),
-          subtitle: context.l10n.t('supportSubtitle'),
-          accentColor: ElderLinkTheme.purple,
-          iconBackground: const Color(0xFFF3EEFF),
         ),
         const Divider(height: 1),
         AppSettingsTile(
@@ -220,7 +241,7 @@ class _MenuCard extends StatelessWidget {
           accentColor: ElderLinkTheme.orange,
           iconBackground: const Color(0xFFFFF5F2),
           isDestructive: true,
-          onTap: () => performMockLogout(context),
+          onTap: onLogout,
         ),
       ],
     );

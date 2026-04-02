@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../repositories/request_repository.dart';
 import '../../services/mock_auth_service.dart';
@@ -33,7 +34,11 @@ class _PostRequestScreenState extends State<PostRequestScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  final _whenOptions = ['Today', 'Tomorrow', 'This Week'];
+  List<String> _whenOptions(BuildContext context) => [
+        context.l10n.t('today'),
+        context.l10n.t('tomorrow'),
+        context.l10n.t('thisWeek'),
+      ];
 
   @override
   void initState() {
@@ -98,7 +103,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
           _isVoiceActive = false;
           _usedVoiceInput = true;
           _descController.text =
-              'Please collect my BP medicines from Apollo Pharmacy, Baner Road. The prescription is ready.';
+              context.l10n.t('voiceMockDescriptionMedicine');
         });
       });
     }
@@ -107,12 +112,12 @@ class _PostRequestScreenState extends State<PostRequestScreen>
   // ── Submit ──
   Future<void> _submit() async {
     if (!_canSubmit) {
-      _showError('Please fill in all required fields.');
+      _showError(context.l10n.t('fillRequiredFields'));
       return;
     }
     setState(() => _isSubmitting = true);
     await MockAuthService.instance.signInAs(UserRole.elder);
-    final whenLabel = _whenOptions[_selectedWhen];
+    final whenLabel = _whenOptions(context)[_selectedWhen];
     final timeLabel = '$whenLabel, ${_selectedTime.format(context)}';
     final location = _locationController.text.trim();
     await RequestRepository.instance.createRequest(
@@ -139,7 +144,8 @@ class _PostRequestScreenState extends State<PostRequestScreen>
           ' ',
         );
     if (description.isEmpty) {
-      return _selectedCategory?.label ?? 'New request';
+      return _selectedCategory?.localizedLabel(context.l10n) ??
+          context.l10n.t('newRequest');
     }
     if (description.length <= 42) return description;
     return '${description.substring(0, 42).trim()}...';
@@ -176,6 +182,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: ElderLinkTheme.background,
       body: FadeTransition(
@@ -194,19 +201,19 @@ class _PostRequestScreenState extends State<PostRequestScreen>
                     children: [
                       _buildSection(
                         step: 1,
-                        title: 'What kind of help do you need?',
+                        title: l10n.t('requestHelpQuestion'),
                         child: _buildCategoryGrid(),
                       ),
                       const SizedBox(height: 20),
                       _buildSection(
                         step: 2,
-                        title: 'Describe your request',
+                        title: l10n.t('describeRequest'),
                         child: _buildDescriptionField(),
                       ),
                       const SizedBox(height: 20),
                       _buildSection(
                         step: 3,
-                        title: 'When & where?',
+                        title: l10n.t('whenWhere'),
                         child: _buildWhenWhere(),
                       ),
                       const SizedBox(height: 28),
@@ -239,9 +246,9 @@ class _PostRequestScreenState extends State<PostRequestScreen>
                     size: 20, color: ElderLinkTheme.textPrimary),
                 onPressed: () => Navigator.pop(context),
               ),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'New Request',
+                  context.l10n.t('newRequest'),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -249,8 +256,8 @@ class _PostRequestScreenState extends State<PostRequestScreen>
                   ),
                 ),
               ),
-              const AppPill(
-                label: 'Step 1 of 3',
+              AppPill(
+                label: context.l10n.t('stepOneOfThree'),
                 textColor: ElderLinkTheme.orange,
                 backgroundColor: Color(0xFFFFF5F2),
               ),
@@ -376,7 +383,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
                 Text(cat.emoji, style: const TextStyle(fontSize: 26)),
                 const SizedBox(height: 6),
                 Text(
-                  cat.label,
+                  cat.localizedLabel(context.l10n),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 11,
@@ -429,8 +436,8 @@ class _PostRequestScreenState extends State<PostRequestScreen>
                 const SizedBox(width: 8),
                 Text(
                   _isVoiceActive
-                      ? 'Listening... tap to stop'
-                      : '🎤  Tap to speak your request',
+                      ? context.l10n.t('voiceListeningPrompt')
+                      : '🎤  ${context.l10n.t('tapToSpeakRequest')}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -452,7 +459,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
             Expanded(child: Divider(color: Colors.grey.shade200, height: 1)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text('or type below',
+              child: Text(context.l10n.t('orTypeBelow'),
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
             ),
             Expanded(child: Divider(color: Colors.grey.shade200, height: 1)),
@@ -471,7 +478,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
           decoration: InputDecoration(
             hintText: _selectedCategory != null
                 ? _hintFor(_selectedCategory!)
-                : 'Describe what you need help with...',
+                : context.l10n.t('describeHelpHint'),
             hintStyle: const TextStyle(
                 fontSize: 13, color: ElderLinkTheme.textSecondary),
             filled: true,
@@ -514,17 +521,17 @@ class _PostRequestScreenState extends State<PostRequestScreen>
   String _hintFor(RequestCategory cat) {
     switch (cat) {
       case RequestCategory.medicine:
-        return 'e.g. Please collect my BP medicines from Apollo Pharmacy, Baner Road...';
+        return context.l10n.t('categoryHintMedicine');
       case RequestCategory.grocery:
-        return 'e.g. Need 1kg tomatoes, onions and green chillies from the local market...';
+        return context.l10n.t('categoryHintGrocery');
       case RequestCategory.transport:
-        return 'e.g. Need a ride to Ruby Hall Clinic for my 3 PM appointment...';
+        return context.l10n.t('categoryHintTransport');
       case RequestCategory.companionship:
-        return 'e.g. Looking for someone to chat with or take a short evening walk...';
+        return context.l10n.t('categoryHintCompanionship');
       case RequestCategory.doctorVisit:
-        return 'e.g. Doctor appointment at Jehangir Hospital at 10 AM, need assistance...';
+        return context.l10n.t('categoryHintDoctorVisit');
       case RequestCategory.errand:
-        return 'e.g. Please pay my electricity bill at the MSEDCL office nearby...';
+        return context.l10n.t('categoryHintErrand');
     }
   }
 
@@ -534,7 +541,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // When chips
-        const Text('When?',
+        Text(context.l10n.t('when'),
             style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -542,7 +549,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
         const SizedBox(height: 8),
         Row(
           children: List.generate(
-            _whenOptions.length,
+            _whenOptions(context).length,
             (i) => GestureDetector(
               onTap: () => setState(() => _selectedWhen = i),
               child: AnimatedContainer(
@@ -562,7 +569,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
                   ),
                 ),
                 child: Text(
-                  _whenOptions[i],
+                  _whenOptions(context)[i],
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -579,7 +586,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
         const SizedBox(height: 14),
 
         // Time picker
-        const Text('Preferred time',
+        Text(context.l10n.t('preferredTime'),
             style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -609,7 +616,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
                   ),
                 ),
                 const Spacer(),
-                Text('Tap to change',
+                Text(context.l10n.t('tapToChange'),
                     style:
                         TextStyle(fontSize: 12, color: Colors.grey.shade400)),
               ],
@@ -620,7 +627,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
         const SizedBox(height: 14),
 
         // Location
-        const Text('Your location',
+        Text(context.l10n.t('yourLocation'),
             style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -634,7 +641,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.location_on_outlined,
                 color: ElderLinkTheme.orange, size: 20),
-            hintText: 'e.g. Baner Road, Pune',
+            hintText: context.l10n.t('locationHint'),
             hintStyle: const TextStyle(
                 fontSize: 13, color: ElderLinkTheme.textSecondary),
             filled: true,
@@ -660,7 +667,7 @@ class _PostRequestScreenState extends State<PostRequestScreen>
               onPressed: () {
                 setState(() => _locationController.text = 'Baner Road, Pune');
               },
-              child: const Text('Use GPS',
+              child: Text(context.l10n.t('useGps'),
                   style: TextStyle(
                       fontSize: 12,
                       color: ElderLinkTheme.orange,
@@ -683,16 +690,16 @@ class _PostRequestScreenState extends State<PostRequestScreen>
             children: [
               const Text('🚨', style: TextStyle(fontSize: 18)),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Mark as urgent',
+                    Text(context.l10n.t('markUrgent'),
                         style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: ElderLinkTheme.textPrimary)),
-                    Text('Notifies more volunteers immediately',
+                    Text(context.l10n.t('markUrgentSubtitle'),
                         style: TextStyle(
                             fontSize: 11, color: ElderLinkTheme.textSecondary)),
                   ],
@@ -733,10 +740,10 @@ class _PostRequestScreenState extends State<PostRequestScreen>
                   child: CircularProgressIndicator(
                       color: Colors.white, strokeWidth: 2.5),
                 )
-              : const Row(
+              : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Post Request',
+                    Text(context.l10n.t('postRequest'),
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w700)),
                     SizedBox(width: 8),
@@ -750,10 +757,10 @@ class _PostRequestScreenState extends State<PostRequestScreen>
 
   // ── Footer note ──
   Widget _buildFooterNote() {
-    return const AppInlineBanner(
+    return AppInlineBanner(
       icon: Icons.lock_outline_rounded,
-      title: 'Private by default',
-      subtitle: 'Your address is only shared with accepted volunteers.',
+      title: context.l10n.t('privateByDefault'),
+      subtitle: context.l10n.t('privateByDefaultSubtitle'),
       color: ElderLinkTheme.orange,
       backgroundColor: Color(0xFFFFF5F2),
     );
@@ -863,11 +870,16 @@ class _SuccessSheetState extends State<_SuccessSheet>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final mediaQuery = MediaQuery.of(context);
     return AppBottomSheetScaffold(
       padding: const EdgeInsets.fromLTRB(28, 16, 28, 48),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: mediaQuery.size.height * 0.82),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
           const AppBottomSheetHandle(),
           const SizedBox(height: 28),
 
@@ -888,8 +900,9 @@ class _SuccessSheetState extends State<_SuccessSheet>
 
           const SizedBox(height: 20),
 
-          const Text(
-            'Request Posted!',
+          Text(
+            l10n.t('requestPosted'),
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -900,7 +913,7 @@ class _SuccessSheetState extends State<_SuccessSheet>
           const SizedBox(height: 8),
 
           Text(
-            'We\'re finding a volunteer near you.\nYou\'ll be notified as soon as someone accepts.',
+            l10n.t('requestPostedSubtitle'),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -919,7 +932,8 @@ class _SuccessSheetState extends State<_SuccessSheet>
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '${widget.category.emoji}  ${widget.category.label} request',
+              '${widget.category.emoji}  ${widget.category.localizedLabel(l10n)} ${l10n.t('requestSuffix')}',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -939,27 +953,30 @@ class _SuccessSheetState extends State<_SuccessSheet>
             ),
             child: Row(
               children: [
-                _InfoChip(icon: '📍', label: 'Searching 2.5km'),
+                _InfoChip(icon: '📍', label: l10n.t('searchingRadius')),
                 const SizedBox(width: 8),
-                _InfoChip(icon: '👥', label: '12 volunteers online'),
+                _InfoChip(icon: '👥', label: l10n.t('volunteersOnline')),
                 const SizedBox(width: 8),
-                _InfoChip(icon: '⏱', label: '~10 min'),
+                _InfoChip(icon: '⏱', label: l10n.t('approxTenMin')),
               ],
             ),
           ),
 
           const SizedBox(height: 24),
 
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: widget.onDone,
-              child: const Text('Back to Home',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-            ),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: widget.onDone,
+                  child: Text(l10n.t('backToHome'),
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

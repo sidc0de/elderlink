@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../models/help_request.dart';
 import '../../repositories/request_repository.dart';
@@ -80,6 +81,7 @@ class _HistoryScreenState extends State<HistoryScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final content = SafeArea(
       child: FadeTransition(
         opacity: _fadeAnimation,
@@ -100,18 +102,18 @@ class _HistoryScreenState extends State<HistoryScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const AppScreenHeader(
-                            title: 'History',
-                            subtitle: 'A record of your support requests',
+                          AppScreenHeader(
+                            title: l10n.t('history'),
+                            subtitle: l10n.t('historyRecordSubtitle'),
                           ),
                           const SizedBox(height: 16),
                           AppSummaryCard(
                             icon: Icons.history_rounded,
                             iconColor: ElderLinkTheme.statusCompletedText,
                             iconBackground: ElderLinkTheme.statusCompleted,
-                            title: '${allRequests.length} total requests',
-                            subtitle:
-                                'Newest requests appear first across all statuses',
+                            title: l10n.format('totalRequestsCount',
+                                {'count': '${allRequests.length}'}),
+                            subtitle: l10n.t('newestRequestsFirstAllStatuses'),
                           ),
                           const SizedBox(height: 12),
                           _HistoryTabs(
@@ -124,13 +126,12 @@ class _HistoryScreenState extends State<HistoryScreen>
                     ),
                   ),
                   if (requests.isEmpty)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       hasScrollBody: false,
                       child: AppEmptyState(
                         emoji: '📚',
-                        title: 'No history yet',
-                        subtitle:
-                            'Your requests will appear here for quick review.',
+                        title: l10n.t('noHistoryYetTitle'),
+                        subtitle: l10n.t('noHistoryYetSubtitle'),
                       ),
                     )
                   else
@@ -181,12 +182,13 @@ class _HistoryTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const tabs = ['All', 'Completed'];
+    final l10n = context.l10n;
+    final tabs = [l10n.t('all'), l10n.t('completed')];
 
     return Row(
       children: [
-        const Expanded(
-          child: AppSectionLabel(title: 'Activity'),
+        Expanded(
+          child: AppSectionLabel(title: l10n.t('activity')),
         ),
         ...List.generate(
           tabs.length,
@@ -228,40 +230,41 @@ class _HistoryRequestCard extends StatelessWidget {
   });
 
   ({String title, String subtitle, Color color, Color backgroundColor})
-      _statusBanner() {
+      _statusBanner(BuildContext context) {
+    final l10n = context.l10n;
     switch (request.status) {
       case RequestStatus.pending:
         return (
-          title: 'Pending',
-          subtitle: 'Waiting for a volunteer to accept this request.',
+          title: l10n.t('pendingStatusTitle'),
+          subtitle: l10n.t('pendingStatusSubtitle'),
           color: ElderLinkTheme.statusPendingText,
           backgroundColor: ElderLinkTheme.statusPending,
         );
       case RequestStatus.accepted:
         return (
-          title: 'Accepted',
-          subtitle: 'A volunteer has accepted and details will update shortly.',
+          title: l10n.t('acceptedStatusTitle'),
+          subtitle: l10n.t('acceptedStatusSubtitle'),
           color: ElderLinkTheme.statusAcceptedText,
           backgroundColor: ElderLinkTheme.statusAccepted,
         );
       case RequestStatus.inProgress:
         return (
-          title: 'In Progress',
-          subtitle: 'This request is currently being handled.',
+          title: l10n.t('inProgressStatusTitle'),
+          subtitle: l10n.t('inProgressStatusSubtitle'),
           color: ElderLinkTheme.statusCompletedText,
           backgroundColor: ElderLinkTheme.statusCompleted,
         );
       case RequestStatus.completed:
         return (
-          title: 'Completed',
-          subtitle: 'This request has been completed successfully.',
+          title: l10n.t('completedStatusTitle'),
+          subtitle: l10n.t('completedStatusSubtitle'),
           color: ElderLinkTheme.statusCompletedText,
           backgroundColor: ElderLinkTheme.statusCompleted,
         );
       case RequestStatus.cancelled:
         return (
-          title: 'Cancelled',
-          subtitle: 'This request is no longer active.',
+          title: l10n.t('cancelledStatusTitle'),
+          subtitle: l10n.t('cancelledStatusSubtitle'),
           color: ElderLinkTheme.danger,
           backgroundColor: const Color(0xFFFCEBEB),
         );
@@ -270,12 +273,13 @@ class _HistoryRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final volunteerName = request.volunteerName;
     final volunteerInitials = request.volunteerInitials;
     final volunteerColor = request.volunteerColor;
-    final banner = _statusBanner();
+    final banner = _statusBanner(context);
     final volunteerPillLabel = request.isRated && request.rating != null
-        ? 'Rated ${request.rating}★'
+        ? l10n.format('ratedStars', {'rating': '${request.rating}'})
         : banner.title;
     final volunteerPillTextColor = request.isRated && request.rating != null
         ? ElderLinkTheme.orange
@@ -296,7 +300,7 @@ class _HistoryRequestCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (request.isEmergency) ...[
-            const AppEmergencyBadge(label: 'Emergency'),
+            AppEmergencyBadge(label: l10n.t('urgent')),
             const SizedBox(height: 12),
           ],
           Row(
@@ -321,7 +325,7 @@ class _HistoryRequestCard extends StatelessWidget {
             Row(
               children: [
                 AppPill(
-                  label: 'Rated ${request.rating}★',
+                  label: l10n.format('ratedStars', {'rating': '${request.rating}'}),
                   textColor: ElderLinkTheme.orange,
                   backgroundColor: const Color(0xFFFFF5F2),
                 ),
@@ -354,7 +358,7 @@ class _HistoryRequestCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('Rate Volunteer'),
+                child: Text(l10n.t('rateVolunteer')),
               ),
             ),
           ],
@@ -378,7 +382,7 @@ class _HistoryRequestCard extends StatelessWidget {
                 ),
                 AppPill(
                   label: request.isRated && request.rating != null
-                      ? 'Rated ${request.rating}★'
+                      ? l10n.format('ratedStars', {'rating': '${request.rating}'})
                       : volunteerPillLabel,
                   textColor: volunteerPillTextColor,
                   backgroundColor: volunteerPillBackgroundColor,
@@ -437,8 +441,8 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
-        content: const Text(
-          'Thank you for rating!',
+        content: Text(
+          context.l10n.t('thankYouForRating'),
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
@@ -447,6 +451,7 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -465,7 +470,9 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
             const AppBottomSheetHandle(),
             const SizedBox(height: 20),
             Text(
-              'Rate ${widget.request.volunteerName ?? 'Volunteer'}',
+              l10n.format('rateNamedVolunteer', {
+                'name': widget.request.volunteerName ?? l10n.t('volunteerRole'),
+              }),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
@@ -492,8 +499,8 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
             TextField(
               controller: _feedbackController,
               maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'Share a short note (optional)',
+              decoration: InputDecoration(
+                hintText: l10n.t('shareShortNoteOptional'),
               ),
             ),
             const SizedBox(height: 18),
@@ -510,7 +517,7 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text('Submit Rating'),
+                    : Text(l10n.t('submitRating')),
               ),
             ),
           ],

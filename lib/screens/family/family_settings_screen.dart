@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../../models/app_user.dart';
+import '../../services/mock_auth_service.dart';
 import '../login_screen.dart';
+import '../shared/edit_profile_screen.dart';
 import '../../ui/app_ui.dart';
 import '../../ui/language_selector.dart';
 
@@ -47,6 +50,7 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final user = MockAuthService.instance.userForRole(UserRole.family);
     final content = SafeArea(
       child: FadeTransition(
         opacity: _fadeAnim,
@@ -56,13 +60,33 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen>
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
               AppScreenHeader(
-                title: context.l10n.t('settings'),
-                subtitle: context.l10n.t('settingsSubtitle'),
+                title: context.l10n.t('profile'),
+                subtitle: context.l10n.t('familyProfileSubtitle'),
               ),
               const SizedBox(height: 16),
-              const _ProfileCard(),
+              _ProfileCard(user: user),
               const SizedBox(height: 12),
-              const _SettingsCard(),
+              _SettingsCard(
+                onEditProfile: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen(
+                        role: UserRole.family,
+                      ),
+                    ),
+                  );
+                  if (mounted) {
+                    setState(() {});
+                  }
+                },
+                onLogout: () async {
+                  final confirmed = await showLogoutConfirmationDialog(context);
+                  if (!confirmed || !context.mounted) {
+                    return;
+                  }
+                  await performMockLogout(context);
+                },
+              ),
             ],
           ),
         ),
@@ -79,7 +103,9 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen>
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard();
+  final AppUser user;
+
+  const _ProfileCard({required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -87,10 +113,10 @@ class _ProfileCard extends StatelessWidget {
       padding: const EdgeInsets.all(22),
       child: Column(
         children: [
-          const _ProfileBadge(),
+          _ProfileBadge(user: user),
           const SizedBox(height: 14),
-          const Text(
-            'Arjun Deshpande',
+          Text(
+            user.name,
             style: TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.w700,
@@ -98,8 +124,8 @@ class _ProfileCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'arjun.deshpande@elderlink.app',
+          Text(
+            user.email ?? '',
             style: TextStyle(
               fontSize: 13,
               color: ElderLinkTheme.textSecondary,
@@ -120,7 +146,9 @@ class _ProfileCard extends StatelessWidget {
 }
 
 class _ProfileBadge extends StatelessWidget {
-  const _ProfileBadge();
+  final AppUser user;
+
+  const _ProfileBadge({required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -136,8 +164,8 @@ class _ProfileBadge extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: const Text(
-        'AD',
+      child: Text(
+        user.initials,
         style: TextStyle(
           fontSize: 26,
           fontWeight: FontWeight.w700,
@@ -149,38 +177,29 @@ class _ProfileBadge extends StatelessWidget {
 }
 
 class _SettingsCard extends StatelessWidget {
-  const _SettingsCard();
+  final VoidCallback onEditProfile;
+  final VoidCallback onLogout;
+
+  const _SettingsCard({
+    required this.onEditProfile,
+    required this.onLogout,
+  });
 
   @override
   Widget build(BuildContext context) {
     return AppSettingsGroup(
       children: [
         AppSettingsTile(
-          icon: Icons.person_outline_rounded,
-          title: context.l10n.t('familyProfile'),
-          subtitle: context.l10n.t('familyProfileSubtitle'),
+          icon: Icons.edit_outlined,
+          title: context.l10n.t('editProfile'),
+          subtitle: context.l10n.t('editProfileSubtitle'),
           accentColor: ElderLinkTheme.deepBlue,
           iconBackground: const Color(0xFFF0F4FF),
+          onTap: onEditProfile,
         ),
         const Divider(height: 1),
         LanguageSettingsTile(
-          subtitle: context.l10n.t('settingsLanguageSubtitle'),
-        ),
-        const Divider(height: 1),
-        AppSettingsTile(
-          icon: Icons.notifications_outlined,
-          title: context.l10n.t('alertsNotifications'),
-          subtitle: context.l10n.t('alertsNotificationsSubtitle'),
-          accentColor: ElderLinkTheme.deepBlue,
-          iconBackground: const Color(0xFFF0F4FF),
-        ),
-        const Divider(height: 1),
-        AppSettingsTile(
-          icon: Icons.help_outline_rounded,
-          title: context.l10n.t('helpSupport'),
-          subtitle: context.l10n.t('helpSupportSubtitle'),
-          accentColor: ElderLinkTheme.deepBlue,
-          iconBackground: const Color(0xFFF0F4FF),
+          subtitle: context.l10n.t('profileLanguageSubtitle'),
         ),
         const Divider(height: 1),
         AppSettingsTile(
@@ -190,7 +209,7 @@ class _SettingsCard extends StatelessWidget {
           accentColor: ElderLinkTheme.orange,
           iconBackground: const Color(0xFFFFF5F2),
           isDestructive: true,
-          onTap: () => performMockLogout(context),
+          onTap: onLogout,
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../main.dart';
 import 'splash_screen.dart';
 
@@ -43,7 +44,7 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
     setState(() => _isLoading = false);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Account created! Please log in.')),
+      SnackBar(content: Text(context.l10n.t('accountCreatedPleaseLogin'))),
     );
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const SplashScreen()),
@@ -52,6 +53,7 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: ElderLinkTheme.background,
       appBar: AppBar(
@@ -101,8 +103,10 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Create Account as Elder',
+                  Text(
+                    l10n.format('createAccountAsRole', {
+                      'role': l10n.t('roleElder'),
+                    }),
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
@@ -110,8 +114,8 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Join ElderLink to request help and stay connected with volunteers.',
+                  Text(
+                    l10n.t('elderSignupSubtitle'),
                     style: TextStyle(
                       fontSize: 14,
                       height: 1.55,
@@ -131,16 +135,16 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                             TextFormField(
                               controller: _nameController,
                               keyboardType: TextInputType.name,
-                              decoration: const InputDecoration(
-                                labelText: 'Full Name',
+                              decoration: InputDecoration(
+                                labelText: l10n.t('fullName'),
                                 prefixIcon: Icon(Icons.person_outline_rounded),
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your name';
+                                  return l10n.t('pleaseEnterName');
                                 }
                                 if (value.trim().length < 3) {
-                                  return 'Name must be at least 3 characters';
+                                  return l10n.t('nameMinLength');
                                 }
                                 return null;
                               },
@@ -149,17 +153,17 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
+                              decoration: InputDecoration(
+                                labelText: l10n.t('email'),
                                 prefixIcon: Icon(Icons.email_outlined),
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your email';
+                                  return l10n.t('pleaseEnterEmail');
                                 }
                                 if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
                                     .hasMatch(value)) {
-                                  return 'Enter a valid email address';
+                                  return l10n.t('enterValidEmail');
                                 }
                                 return null;
                               },
@@ -168,17 +172,17 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                             TextFormField(
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
-                              decoration: const InputDecoration(
-                                labelText: 'Phone Number',
+                              decoration: InputDecoration(
+                                labelText: l10n.t('phoneNumber'),
                                 prefixIcon: Icon(Icons.phone_outlined),
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your phone number';
+                                  return l10n.t('pleaseEnterPhoneNumber');
                                 }
                                 if (value.replaceAll(RegExp(r'\D'), '').length <
                                     10) {
-                                  return 'Enter a valid phone number';
+                                  return l10n.t('enterValidPhone');
                                 }
                                 return null;
                               },
@@ -188,7 +192,7 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                               controller: _passwordController,
                               obscureText: _obscurePassword,
                               decoration: InputDecoration(
-                                labelText: 'Password',
+                                labelText: l10n.t('password'),
                                 prefixIcon: const Icon(Icons.lock_outline_rounded),
                                 suffixIcon: IconButton(
                                   onPressed: () {
@@ -205,10 +209,10 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter a password';
+                                  return l10n.t('pleaseEnterPassword');
                                 }
                                 if (value.length < 6) {
-                                  return 'Password must be at least 6 characters';
+                                  return l10n.t('passwordMinLength');
                                 }
                                 return null;
                               },
@@ -217,13 +221,13 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                             TextFormField(
                               controller: _addressController,
                               keyboardType: TextInputType.streetAddress,
-                              decoration: const InputDecoration(
-                                labelText: 'Address',
+                              decoration: InputDecoration(
+                                labelText: l10n.t('address'),
                                 prefixIcon: Icon(Icons.location_on_outlined),
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your address';
+                                  return l10n.t('pleaseEnterAddress');
                                 }
                                 return null;
                               },
@@ -232,13 +236,13 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                             TextFormField(
                               controller: _emergencyContactController,
                               keyboardType: TextInputType.name,
-                              decoration: const InputDecoration(
-                                labelText: 'Emergency Contact Name',
+                              decoration: InputDecoration(
+                                labelText: l10n.t('emergencyContactName'),
                                 prefixIcon: Icon(Icons.person_outline_rounded),
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter emergency contact name';
+                                  return l10n.t('pleaseEnterEmergencyContactName');
                                 }
                                 return null;
                               },
@@ -247,17 +251,17 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                             TextFormField(
                               controller: _emergencyPhoneController,
                               keyboardType: TextInputType.phone,
-                              decoration: const InputDecoration(
-                                labelText: 'Emergency Contact Phone',
+                              decoration: InputDecoration(
+                                labelText: l10n.t('emergencyContactPhone'),
                                 prefixIcon: Icon(Icons.phone_outlined),
                               ),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter emergency contact phone';
+                                  return l10n.t('pleaseEnterEmergencyContactPhone');
                                 }
                                 if (value.replaceAll(RegExp(r'\D'), '').length <
                                     10) {
-                                  return 'Enter a valid phone number';
+                                  return l10n.t('enterValidPhone');
                                 }
                                 return null;
                               },
@@ -277,7 +281,7 @@ class _SignupElderScreenState extends State<SignupElderScreen> {
                                           color: Colors.white,
                                         ),
                                       )
-                                    : const Text('Create Account'),
+                                    : Text(l10n.t('createAccount')),
                               ),
                             ),
                           ],

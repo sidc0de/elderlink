@@ -15,7 +15,7 @@ class FakeBackend {
           'subtitle': 'Baner Road, Pune · Today 11 AM',
           'category': RequestCategory.medicine,
           'status': RequestStatus.accepted,
-          'volunteerName': 'Rohit K.',
+          'volunteerName': 'Siddhika Deshmukh',
           'volunteerInitials': 'RK',
           'volunteerColor': ElderLinkTheme.orange,
         },
@@ -32,7 +32,7 @@ class FakeBackend {
           'subtitle': 'Local market · Yesterday',
           'category': RequestCategory.grocery,
           'status': RequestStatus.completed,
-          'volunteerName': 'Ananya P.',
+          'volunteerName': 'Siddhika Deshmukh',
           'volunteerInitials': 'AP',
           'volunteerColor': ElderLinkTheme.purple,
         },
@@ -56,7 +56,7 @@ class FakeBackend {
     return {
       'syncedAt': DateTime.now().subtract(const Duration(minutes: 4)),
       'elder': {
-        'name': 'Sunita Deshpande',
+        'name': 'Ganesh Jagtap',
         'initials': 'SD',
         'color': ElderLinkTheme.orange,
         'location': 'Baner, Pune',
@@ -79,7 +79,7 @@ class FakeBackend {
           'icon': '✅',
           'iconBg': const Color(0xFFEDFAF3),
           'title': 'Medicine pickup completed',
-          'subtitle': 'Rohit Kumar · Apollo Pharmacy, Baner',
+          'subtitle': 'Siddhika Deshmukh · Apollo Pharmacy, Baner',
           'timeAgo': '2 hours ago',
           'type': 'taskCompleted',
         },
@@ -87,7 +87,7 @@ class FakeBackend {
           'icon': '🙋',
           'iconBg': const Color(0xFFF3EEFF),
           'title': 'Volunteer accepted request',
-          'subtitle': 'Ananya P. will bring vegetables today',
+          'subtitle': 'Siddhika Deshmukh will bring vegetables today',
           'timeAgo': 'This morning',
           'type': 'taskAccepted',
         },
@@ -103,7 +103,7 @@ class FakeBackend {
           'icon': '💬',
           'iconBg': const Color(0xFFF0F4FF),
           'title': 'Chat with volunteer',
-          'subtitle': 'Rohit Kumar · 12 messages',
+          'subtitle': 'Siddhika Deshmukh · 12 messages',
           'timeAgo': '3 days ago',
           'type': 'chat',
         },
@@ -119,7 +119,7 @@ class FakeBackend {
       'tasks': [
         {
           'id': '1',
-          'elderName': 'Sunita Deshpande',
+          'elderName': 'Ganesh Jagtap',
           'elderInitials': 'SD',
           'elderColor': const Color(0xFFFF6B35),
           'elderRating': 4.8,
@@ -185,3 +185,4 @@ class FakeBackend {
     await Future.delayed(const Duration(milliseconds: 700));
   }
 }
+

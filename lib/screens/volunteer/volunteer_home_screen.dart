@@ -50,7 +50,7 @@ class VolunteerTask {
 final List<VolunteerTask> _allTasks = [
   VolunteerTask(
     id: '1',
-    elderName: 'Sunita Deshpande',
+    elderName: 'Ganesh Jagtap',
     elderInitials: 'SD',
     elderColor: const Color(0xFFFF6B35),
     elderRating: 4.8,
@@ -429,7 +429,7 @@ class _VolunteerHomeScreenState extends State<VolunteerHomeScreen>
                               fontSize: 13,
                               color: Colors.white.withOpacity(0.75))),
                       const SizedBox(height: 2),
-                      const Text('Rohit Kumar 🌟',
+                      const Text('Siddhika Deshmukh 🌟',
                           style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
@@ -442,31 +442,6 @@ class _VolunteerHomeScreenState extends State<VolunteerHomeScreen>
                     ],
                   ),
                   const Spacer(),
-                  Stack(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.notifications_outlined,
-                            color: Colors.white, size: 22),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                              color: ElderLinkTheme.orange,
-                              shape: BoxShape.circle),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
 
@@ -1475,3 +1450,4 @@ class _SortSheet extends StatelessWidget {
     );
   }
 }
+

@@ -5,7 +5,6 @@ import '../../repositories/dashboard_repository.dart';
 import '../../repositories/request_repository.dart';
 import '../../services/mock_auth_service.dart';
 import '../../ui/app_ui.dart';
-import 'family_messages_screen.dart';
 import 'family_settings_screen.dart';
 import 'family_timeline_screen.dart';
 
@@ -72,7 +71,7 @@ class LinkedElder {
 //  MOCK DATA
 // ─────────────────────────────────────────────
 const _elder = LinkedElder(
-  name: 'Sunita Deshpande',
+  name: 'Ganesh Jagtap',
   initials: 'SD',
   color: ElderLinkTheme.orange,
   location: 'Baner, Pune',
@@ -97,7 +96,7 @@ final List<ActivityEntry> _activities = [
     icon: '✅',
     iconBg: const Color(0xFFEDFAF3),
     title: 'Medicine pickup completed',
-    subtitle: 'Rohit Kumar · Apollo Pharmacy, Baner',
+    subtitle: 'Siddhika Deshmukh · Apollo Pharmacy, Baner',
     timeAgo: '2 hours ago',
     type: ActivityType.taskCompleted,
   ),
@@ -105,7 +104,7 @@ final List<ActivityEntry> _activities = [
     icon: '🙋',
     iconBg: const Color(0xFFF3EEFF),
     title: 'Volunteer accepted request',
-    subtitle: 'Ananya P. will bring vegetables today',
+    subtitle: 'Siddhika Deshmukh will bring vegetables today',
     timeAgo: 'This morning',
     type: ActivityType.taskAccepted,
   ),
@@ -121,7 +120,7 @@ final List<ActivityEntry> _activities = [
     icon: '✅',
     iconBg: const Color(0xFFEDFAF3),
     title: 'Grocery errand completed',
-    subtitle: 'Ananya P. · Rated 5 stars',
+    subtitle: 'Siddhika Deshmukh · Rated 5 stars',
     timeAgo: 'Yesterday',
     type: ActivityType.taskCompleted,
   ),
@@ -145,7 +144,7 @@ final List<ActivityEntry> _activities = [
     icon: '💬',
     iconBg: const Color(0xFFF0F4FF),
     title: 'Chat with volunteer',
-    subtitle: 'Rohit Kumar · 12 messages',
+    subtitle: 'Siddhika Deshmukh · 12 messages',
     timeAgo: '3 days ago',
     type: ActivityType.chat,
   ),
@@ -296,8 +295,6 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
       case 1:
         return const FamilyTimelineScreen(embedded: true);
       case 2:
-        return const FamilyMessagesScreen(embedded: true);
-      case 3:
         return const FamilySettingsScreen(embedded: true);
       default:
         return RefreshIndicator(
@@ -316,12 +313,11 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
                   if (!_alertDismissed)
                     SliverToBoxAdapter(child: _buildAlertBanner()),
                   SliverToBoxAdapter(child: _buildMoodSection()),
-                  SliverToBoxAdapter(child: _buildQuickActions()),
                   SliverToBoxAdapter(child: _buildActivityHeader()),
                   SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (ctx, i) => _ActivityCard(activity: _activityData[i]),
-                      childCount: _activityData.length,
+                      childCount: _activityData.length > 3 ? 3 : _activityData.length,
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 90)),
@@ -366,7 +362,7 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
                       style: TextStyle(
                           fontSize: 13, color: Colors.white.withOpacity(0.65))),
                   const SizedBox(height: 3),
-                  const Text('Arjun Deshpande',
+                  const Text('Shruti',
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -378,32 +374,6 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
                 ],
               ),
               const Spacer(),
-              // Notification bell
-              Stack(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.notifications_outlined,
-                        color: Colors.white, size: 22),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                          color: ElderLinkTheme.orange, shape: BoxShape.circle),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 10),
               // Add elder button
               GestureDetector(
                 onTap: () => _showSnackbar('➕ Add another elder — coming soon!',
@@ -471,20 +441,25 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(_elderData.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: ElderLinkTheme.textPrimary)),
                 const SizedBox(height: 3),
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
                     const Icon(Icons.location_on_outlined,
                         size: 13, color: ElderLinkTheme.textSecondary),
-                    const SizedBox(width: 3),
                     Text(_elderData.location,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             fontSize: 12, color: ElderLinkTheme.textSecondary)),
-                    const SizedBox(width: 10),
                     Container(
                       width: 4,
                       height: 4,
@@ -492,8 +467,9 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
                           color: ElderLinkTheme.textSecondary,
                           shape: BoxShape.circle),
                     ),
-                    const SizedBox(width: 10),
                     Text('Active ${_elderData.lastActive}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             fontSize: 12, color: ElderLinkTheme.textSecondary)),
                   ],
@@ -501,6 +477,7 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
               ],
             ),
           ),
+          const SizedBox(width: 12),
           // Online badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -586,7 +563,7 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
                         fontWeight: FontWeight.w600,
                         color: ElderLinkTheme.orange)),
                 SizedBox(height: 2),
-                Text('Rohit Kumar accepted · Arriving at 11 AM today',
+                Text('Siddhika Deshmukh accepted · Arriving at 11 AM today',
                     style: TextStyle(fontSize: 12, color: Color(0xFFC0693A))),
               ],
             ),
@@ -720,7 +697,7 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
             color: const Color(0xFFEDFAF3),
             textColor: const Color(0xFF2E7D32),
             onTap: () =>
-                _showSnackbar('📞 Calling Sunita...', ElderLinkTheme.green),
+                _showSnackbar('📞 Calling Ganesh...', ElderLinkTheme.green),
           ),
           const SizedBox(width: 10),
           _QuickActionBtn(
@@ -779,14 +756,11 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
       type: BottomNavigationBarType.fixed,
       elevation: 12,
       items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+            icon: Icon(Icons.timeline_rounded), label: 'Activity'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.timeline_rounded), label: 'Timeline'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline_rounded), label: 'Messages'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined), label: 'Settings'),
+            icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
       ],
     );
   }
@@ -810,7 +784,7 @@ class _FamilyHomeScreenState extends State<FamilyHomeScreen>
       builder: (_) => _SendNoteSheet(
         onSend: (msg) {
           Navigator.pop(context);
-          _showSnackbar('💬 Note sent to Sunita!', ElderLinkTheme.purple);
+          _showSnackbar('💬 Note sent to Ganesh!', ElderLinkTheme.purple);
         },
       ),
     );
@@ -1036,7 +1010,7 @@ class _MoodHistorySheet extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   color: ElderLinkTheme.textPrimary)),
           const SizedBox(height: 4),
-          const Text('Sunita\'s mood over the past weeks',
+          const Text('Ganesh\'s mood over the past weeks',
               style:
                   TextStyle(fontSize: 13, color: ElderLinkTheme.textSecondary)),
           const SizedBox(height: 20),
@@ -1105,7 +1079,7 @@ class _MoodHistorySheet extends StatelessWidget {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Sunita seems happiest on weekdays. Consider scheduling social calls on weekends.',
+                    'Ganesh seems happiest on weekdays. Consider scheduling social calls on weekends.',
                     style: TextStyle(
                         fontSize: 12,
                         color: ElderLinkTheme.purple,
@@ -1284,3 +1258,4 @@ class _SendNoteSheetState extends State<_SendNoteSheet> {
     );
   }
 }
+

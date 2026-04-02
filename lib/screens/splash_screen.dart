@@ -270,14 +270,15 @@ class _LoginOrSignupSheet extends StatelessWidget {
 
   const _LoginOrSignupSheet({required this.role});
 
-  String _getRoleLabel() {
+  String _getRoleLabel(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     switch (role) {
       case UserRole.elder:
-        return 'Elder';
+        return l10n.t('roleElder');
       case UserRole.volunteer:
-        return 'Volunteer';
+        return l10n.t('roleVolunteer');
       case UserRole.family:
-        return 'Family Member';
+        return l10n.t('roleFamilyMember');
     }
   }
 
@@ -294,6 +295,7 @@ class _LoginOrSignupSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
@@ -305,7 +307,7 @@ class _LoginOrSignupSheet extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
           Text(
-            'Continue as ${_getRoleLabel()}',
+            l10n.format('continueAsRole', {'role': _getRoleLabel(context)}),
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -314,7 +316,7 @@ class _LoginOrSignupSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Choose how you want to proceed',
+            l10n.t('chooseHowToProceed'),
             style: TextStyle(
               fontSize: 13,
               color: ElderLinkTheme.textSecondary,
@@ -333,7 +335,7 @@ class _LoginOrSignupSheet extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Login to Existing Account'),
+              child: Text(l10n.t('loginExistingAccount')),
             ),
           ),
           const SizedBox(height: 12),
@@ -349,7 +351,7 @@ class _LoginOrSignupSheet extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Create New Account'),
+              child: Text(l10n.t('createNewAccount')),
             ),
           ),
           const SizedBox(height: 16),

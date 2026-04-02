@@ -37,10 +37,10 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
   late Animation<Offset> _slideAnim;
 
   final List<Map<String, String>> _moods = [
-    {'emoji': '😊', 'label': 'Happy'},
-    {'emoji': '😐', 'label': 'Okay'},
-    {'emoji': '😔', 'label': 'Sad'},
-    {'emoji': '😴', 'label': 'Tired'},
+    {'emoji': '😊', 'labelKey': 'moodHappy'},
+    {'emoji': '😐', 'labelKey': 'moodOkay'},
+    {'emoji': '😔', 'labelKey': 'moodSad'},
+    {'emoji': '😴', 'labelKey': 'moodTired'},
   ];
 
   @override
@@ -87,16 +87,17 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
   }
 
   String get _syncLabel {
+    final l10n = context.l10n;
     final syncedAt = _requestRepository.lastUpdatedAt;
 
     final difference = DateTime.now().difference(syncedAt);
     if (difference.inMinutes < 1) {
-      return 'Updated just now';
+      return l10n.updatedJustNow();
     }
     if (difference.inHours < 1) {
-      return 'Updated ${difference.inMinutes} min ago';
+      return l10n.updatedMinutesAgo(difference.inMinutes);
     }
-    return 'Updated ${difference.inHours}h ago';
+    return l10n.updatedHoursAgo(difference.inHours);
   }
 
   void _showSosDialog() {
@@ -172,12 +173,16 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
   }
 
   Future<void> _handleSosConfirm() async {
+    final l10n = context.l10n;
     final request = await _requestRepository.triggerSos(
-      locationLabel: 'Baner, Pune - Location shared with volunteer',
+      locationLabel: 'Baner, Pune - ${l10n.t('locationSharedWithVolunteer')}',
     );
     if (!mounted || request == null) return;
 
-    _showSnackbar('Emergency alert sent - A volunteer is on the way', Colors.red);
+    _showSnackbar(
+      '${l10n.t('emergencyAlertSentTitle')} - ${l10n.t('volunteerOnWay')}',
+      Colors.red,
+    );
 
     final volunteerId = request.volunteerId;
     if (volunteerId == null) return;
@@ -256,7 +261,8 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
                             if (i >= filteredRequests.length) return null;
                             return _RequestCard(
                               request: filteredRequests[i],
-                              onTap: () => _showDetailSheet(filteredRequests[i]),
+                              onTap: () =>
+                                  _showDetailSheet(filteredRequests[i]),
                             );
                           },
                           childCount: filteredRequests.length,
@@ -300,7 +306,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
                           style:
                               TextStyle(fontSize: 13, color: Colors.white70)),
                       SizedBox(height: 2),
-                      const Text('Sunita Deshpande 👋',
+                      const Text('Ganesh Jagtap 👋',
                           style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
@@ -320,32 +326,6 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
                         compact: true,
                         foregroundColor: Colors.white,
                         backgroundColor: Colors.white.withOpacity(0.18),
-                      ),
-                      const SizedBox(width: 8),
-                      Stack(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.notifications_outlined,
-                                color: Colors.white, size: 22),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                  color: ElderLinkTheme.darkNavy,
-                                  shape: BoxShape.circle),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
@@ -370,7 +350,10 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
                             onTap: () {
                               setState(() => _selectedMood = i);
                               _showSnackbar(
-                                  '${_moods[i]['emoji']} Mood logged: ${_moods[i]['label']}',
+                                  context.l10n.moodLogged(
+                                    _moods[i]['emoji']!,
+                                    context.l10n.t(_moods[i]['labelKey']!),
+                                  ),
                                   ElderLinkTheme.orange);
                             },
                             child: AnimatedContainer(
@@ -408,16 +391,22 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
                           ),
                         ],
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('🆘', style: TextStyle(fontSize: 16)),
-                          SizedBox(width: 6),
-                          Text('SOS',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: ElderLinkTheme.orange)),
+                          const Text(
+                            '🆘',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            context.l10n.t('sos'),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: ElderLinkTheme.orange,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -465,13 +454,13 @@ class _ElderHomeScreenState extends State<ElderHomeScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$activeCount active requests',
+                  Text(context.l10n.activeRequestsCount(activeCount),
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: ElderLinkTheme.textPrimary)),
                   SizedBox(height: 2),
-                  Text('Live status synced from your care network',
+                  Text(context.l10n.t('activeRequestsSyncedSubtitle'),
                       style: TextStyle(
                           fontSize: 12, color: ElderLinkTheme.textSecondary)),
                 ],
@@ -664,7 +653,7 @@ class _RequestCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (request.isEmergency) ...[
-              const AppEmergencyBadge(label: 'SOS Active'),
+              AppEmergencyBadge(label: context.l10n.t('sosActive')),
               const SizedBox(height: 10),
             ],
             Row(
@@ -816,7 +805,7 @@ class _RequestDetailSheet extends StatelessWidget {
             const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 16),
-            const Text('Assigned Volunteer',
+            Text(context.l10n.t('assignedVolunteer'),
                 style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -842,9 +831,11 @@ class _RequestDetailSheet extends StatelessWidget {
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: ElderLinkTheme.textPrimary)),
-                    const Text('⭐ 4.9 rating · 24 tasks done',
-                        style: TextStyle(
-                            fontSize: 12, color: ElderLinkTheme.textSecondary)),
+                    Text(
+                      '⭐ 4.9 ${context.l10n.t('rating')} · 24 ${context.l10n.t('tasksDone').toLowerCase()}',
+                      style: const TextStyle(
+                          fontSize: 12, color: ElderLinkTheme.textSecondary),
+                    ),
                   ],
                 ),
                 const Spacer(),
@@ -880,8 +871,8 @@ class _RequestDetailSheet extends StatelessWidget {
                 }
               },
               child: Text(request.status == RequestStatus.completed
-                  ? 'Rate Volunteer'
-                  : 'Close'),
+                  ? context.l10n.t('rateVolunteer')
+                  : context.l10n.t('close')),
             ),
           ),
         ],
@@ -928,6 +919,7 @@ class _SosDialogState extends State<_SosDialog>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
@@ -949,7 +941,8 @@ class _SosDialogState extends State<_SosDialog>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.red.withOpacity(0.16 + (_controller.value * 0.12)),
+                          color: Colors.red
+                              .withOpacity(0.16 + (_controller.value * 0.12)),
                           blurRadius: 18,
                           spreadRadius: 2,
                         ),
@@ -966,8 +959,8 @@ class _SosDialogState extends State<_SosDialog>
               },
             ),
             const SizedBox(height: 18),
-            const Text(
-              'Emergency Alert Sent',
+            Text(
+              l10n.t('emergencyAlertSentTitle'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -975,8 +968,8 @@ class _SosDialogState extends State<_SosDialog>
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'We will create a high-priority emergency request, share your location, and connect you with the assigned volunteer right away.',
+            Text(
+              l10n.t('emergencyAlertSentBody'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -992,11 +985,11 @@ class _SosDialogState extends State<_SosDialog>
                 color: const Color(0xFFFFF8F6),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'What happens next',
+                    l10n.t('whatHappensNext'),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -1005,20 +998,24 @@ class _SosDialogState extends State<_SosDialog>
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '• Emergency request created',
-                    style: TextStyle(fontSize: 13, color: ElderLinkTheme.textPrimary),
+                    '• ${l10n.t('emergencyRequestCreated')}',
+                    style: const TextStyle(
+                        fontSize: 13, color: ElderLinkTheme.textPrimary),
                   ),
                   Text(
-                    '• Volunteer assigned immediately',
-                    style: TextStyle(fontSize: 13, color: ElderLinkTheme.textPrimary),
+                    '• ${l10n.t('volunteerAssignedImmediately')}',
+                    style: const TextStyle(
+                        fontSize: 13, color: ElderLinkTheme.textPrimary),
                   ),
                   Text(
-                    '• Location shared with volunteer',
-                    style: TextStyle(fontSize: 13, color: ElderLinkTheme.textPrimary),
+                    '• ${l10n.t('locationSharedWithVolunteer')}',
+                    style: const TextStyle(
+                        fontSize: 13, color: ElderLinkTheme.textPrimary),
                   ),
                   Text(
-                    '• Emergency chat opens automatically',
-                    style: TextStyle(fontSize: 13, color: ElderLinkTheme.textPrimary),
+                    '• ${l10n.t('emergencyChatOpensAutomatically')}',
+                    style: const TextStyle(
+                        fontSize: 13, color: ElderLinkTheme.textPrimary),
                   ),
                 ],
               ),
@@ -1041,13 +1038,13 @@ class _SosDialogState extends State<_SosDialog>
                           color: Colors.white,
                         ),
                       )
-                    : const Text('Send Emergency Alert'),
+                    : Text(l10n.t('sendEmergencyAlert')),
               ),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: _submitting ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(l10n.t('cancel')),
             ),
           ],
         ),
@@ -1092,8 +1089,8 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
-        content: const Text(
-          'Thank you for rating!',
+        content: Text(
+          context.l10n.t('thankYouForRating'),
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
@@ -1102,8 +1099,10 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: AppBottomSheetScaffold(
         padding: EdgeInsets.fromLTRB(
           24,
@@ -1118,7 +1117,9 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
             const AppBottomSheetHandle(),
             const SizedBox(height: 20),
             Text(
-              'Rate ${widget.request.volunteerName ?? 'Volunteer'}',
+              l10n.format('rateNamedVolunteer', {
+                'name': widget.request.volunteerName ?? l10n.t('volunteerRole'),
+              }),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
@@ -1147,8 +1148,8 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
             TextField(
               controller: _feedbackController,
               maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'Share a short note (optional)',
+              decoration: InputDecoration(
+                hintText: l10n.t('shareShortNoteOptional'),
               ),
             ),
             const SizedBox(height: 18),
@@ -1165,7 +1166,7 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text('Submit Rating'),
+                    : Text(l10n.t('submitRating')),
               ),
             ),
           ],
@@ -1174,3 +1175,4 @@ class _RateVolunteerSheetState extends State<_RateVolunteerSheet> {
     );
   }
 }
+

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../models/help_request.dart';
 import '../../repositories/chat_repository.dart';
@@ -80,14 +81,21 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen>
   }
 
   Future<void> _runAction(HelpRequest task) async {
+    final l10n = context.l10n;
     switch (task.status) {
       case RequestStatus.accepted:
         await _repository.startRequest(task.id);
-        _showSnackbar('Task started: ${task.title}', ElderLinkTheme.purple);
+        _showSnackbar(
+          l10n.format('taskStarted', {'title': task.title}),
+          ElderLinkTheme.purple,
+        );
         break;
       case RequestStatus.inProgress:
         await _repository.completeRequest(task.id);
-        _showSnackbar('Task completed: ${task.title}', ElderLinkTheme.statusAcceptedText);
+        _showSnackbar(
+          l10n.format('taskCompletedSnack', {'title': task.title}),
+          ElderLinkTheme.statusAcceptedText,
+        );
         break;
       default:
         break;
@@ -130,10 +138,11 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final body = _isLoading
         ? AppLoadingState(
             color: ElderLinkTheme.purple,
-            message: 'Loading your tasks...',
+            message: l10n.t('loadingYourTasks'),
           )
         : AnimatedBuilder(
             animation: _repository,
@@ -150,18 +159,17 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const AppScreenHeader(
-                            title: 'My Tasks',
-                            subtitle:
-                                'Track accepted requests and completed support',
+                          AppScreenHeader(
+                            title: l10n.t('myTasks'),
+                            subtitle: l10n.t('myTasksSubtitle'),
                           ),
                           const SizedBox(height: 16),
                           AppSummaryCard(
                             icon: Icons.checklist_rounded,
                             iconColor: ElderLinkTheme.purple,
                             iconBackground: const Color(0xFFF3EEFF),
-                            title: '${allTasks.length} task updates',
-                            subtitle: 'See what is upcoming, active, and completed',
+                            title: l10n.taskUpdatesCount(allTasks.length),
+                            subtitle: l10n.t('seeUpcomingActiveCompleted'),
                           ),
                           const SizedBox(height: 12),
                           _TaskTabs(
@@ -174,13 +182,12 @@ class _VolunteerMyTasksScreenState extends State<VolunteerMyTasksScreen>
                     ),
                   ),
                   if (tasks.isEmpty)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       hasScrollBody: false,
                       child: AppEmptyState(
                         emoji: '🗂️',
-                        title: 'No tasks here yet',
-                        subtitle:
-                            'Accepted and completed requests will appear here.',
+                        title: l10n.t('noTasksYetTitle'),
+                        subtitle: l10n.t('noTasksYetSubtitle'),
                       ),
                     )
                   else
@@ -237,11 +244,12 @@ class _TaskTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const tabs = ['All', 'Active', 'Completed'];
+    final l10n = context.l10n;
+    final tabs = [l10n.t('all'), l10n.t('active'), l10n.t('completed')];
 
     return Row(
       children: [
-        const Expanded(child: AppSectionLabel(title: 'Task Status')),
+        Expanded(child: AppSectionLabel(title: l10n.t('taskStatusLabel'))),
         ...List.generate(
           tabs.length,
           (index) => Padding(
@@ -283,19 +291,14 @@ class _TaskCard extends StatelessWidget {
     required this.onOpenChat,
   });
 
-  String? get _actionLabel {
-    switch (task.status) {
-      case RequestStatus.accepted:
-        return 'Start Task';
-      case RequestStatus.inProgress:
-        return 'Mark Completed';
-      default:
-        return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final actionLabel = switch (task.status) {
+      RequestStatus.accepted => l10n.t('startTask'),
+      RequestStatus.inProgress => l10n.t('markCompleted'),
+      _ => null,
+    };
     return AppSurfaceCard(
       border: Border.all(
         color: task.isEmergency
@@ -307,7 +310,7 @@ class _TaskCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (task.isEmergency) ...[
-            const AppEmergencyBadge(label: 'Emergency'),
+            AppEmergencyBadge(label: l10n.t('urgent')),
             const SizedBox(height: 12),
           ],
           Row(
@@ -340,7 +343,7 @@ class _TaskCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onOpenChat,
                   icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-                  label: const Text('Message'),
+                  label: Text(l10n.t('messageAction')),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(44),
                   ),
@@ -349,7 +352,7 @@ class _TaskCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          if (_actionLabel != null)
+          if (actionLabel != null)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -363,7 +366,7 @@ class _TaskCard extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  _actionLabel!,
+                  actionLabel,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -373,10 +376,10 @@ class _TaskCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: AppPill(
                 label: task.status == RequestStatus.completed
-                    ? 'Completed'
+                    ? l10n.t('completed')
                     : task.status == RequestStatus.cancelled
-                        ? 'Cancelled'
-                        : 'Waiting',
+                        ? l10n.t('cancelledStatusTitle')
+                        : l10n.t('waiting'),
                 textColor: task.status == RequestStatus.completed
                     ? ElderLinkTheme.statusAcceptedText
                     : ElderLinkTheme.textSecondary,
